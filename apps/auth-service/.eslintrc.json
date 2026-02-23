@@ -1,0 +1,15 @@
+{
+  "extends": ["../../.eslintrc.json"],
+  "ignorePatterns": ["!**/*", "**/*.spec.ts", "**/*.test.ts"],
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "excludedFiles": ["*.spec.ts", "*.test.ts"],
+      "parserOptions": {
+        "project": ["apps/auth-service/tsconfig.app.json"],
+        "createDefaultProgram": true
+      },
+      "rules": {}
+    }
+  ]
+}

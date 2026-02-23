@@ -1,0 +1,100 @@
+# =============================================================
+# infrastructure/k8s/upload-service/ingress.yaml
+# Adds /api/v1/upload routes to the ALB ingress
+#
+# NOTE: If you have a single ingress resource in auth-service/ingress.yaml,
+# add the upload paths to that file instead of creating a new ingress.
+# Having multiple Ingress resources for the same host with the same
+# ingress class will cause conflicts with ALB.
+#
+# RECOMMENDED: Use the combined ingress below or add to existing ingress.
+# =============================================================
+
+# OPTION A: Standalone ingress (use if auth-service ingress is separate per service)
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: upload-service-ingress
+#   namespace: finance
+#   annotations:
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/group.name: finance-platform  # Groups with auth ingress!
+#     alb.ingress.kubernetes.io/scheme: internet-facing
+#     alb.ingress.kubernetes.io/target-type: ip
+#     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/YOUR-CERT
+#     alb.ingress.kubernetes.io/ssl-redirect: '443'
+# spec:
+#   rules:
+#     - host: api.yourdomain.com
+#       http:
+#         paths:
+#           - path: /api/v1/upload
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: upload-service
+#                 port:
+#                   number: 80
+
+# =============================================================
+# OPTION B: Combined ingress for ALL services (RECOMMENDED)
+# Replace infrastructure/k8s/auth-service/ingress.yaml with this
+# =============================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finance-platform-ingress
+  namespace: finance
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789012:certificate/YOUR-CERT-ARN
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '3'
+    # Rate limiting at ALB level (WAF rule)
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:...
+spec:
+  rules:
+    - host: api.yourdomain.com
+      http:
+        paths:
+          # ── Auth Service ─────────────────────────────────────
+          - path: /api/v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 80
+
+          # ── Upload Service ───────────────────────────────────
+          - path: /api/v1/upload
+            pathType: Prefix
+            backend:
+              service:
+                name: upload-service
+                port:
+                  number: 80
+
+          # ── Analytics Service (add when ready) ───────────────
+          # - path: /api/v1/analytics
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: analytics-service
+          #       port:
+          #         number: 80
+
+          # ── AI Chatbot Service (add when ready) ──────────────
+          # - path: /api/v1/chat
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: analytics-service
+          #       port:
+          #         number: 80

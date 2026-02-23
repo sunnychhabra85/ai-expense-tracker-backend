@@ -1,0 +1,195 @@
+# =============================================================
+# .github/workflows/upload-service.yml
+# CI/CD pipeline for the Upload Service
+# Mirrors auth-service.yml pattern — same 3-job structure
+# =============================================================
+
+name: Upload Service — Build, Test & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/upload-service/**'
+      - 'libs/database/**'
+      - 'libs/shared-types/**'
+      - '.github/workflows/upload-service.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/upload-service/**'
+      - 'libs/**'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: upload-service
+  EKS_CLUSTER: production-cluster
+  K8S_NAMESPACE: finance
+  SERVICE_NAME: upload-service
+
+jobs:
+  # ── Job 1: Test ──────────────────────────────────────────────
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: financedb_test
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: testpassword
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=libs/database/prisma/schema.prisma
+
+      - name: Run DB migrations (test)
+        run: npx prisma migrate deploy --schema=libs/database/prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://admin:testpassword@localhost:5432/financedb_test
+
+      - run: npx nx lint upload-service
+
+      - name: Unit tests
+        run: npx nx test upload-service --passWithNoTests --coverage
+        env:
+          DATABASE_URL: postgresql://admin:testpassword@localhost:5432/financedb_test
+          JWT_ACCESS_SECRET: test-access-secret-min-32-chars-long
+          # Mock AWS values — S3/SQS are mocked in tests
+          AWS_REGION: us-east-1
+          AWS_S3_BUCKET: test-bucket
+          AWS_SQS_PROCESSING_URL: https://sqs.us-east-1.amazonaws.com/test/queue
+
+  # ── Job 2: Build & Push ──────────────────────────────────────
+  build-and-push:
+    name: Build & Push to ECR
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/production-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate image tag
+        id: meta
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          echo "tag=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/upload-service/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
+
+  # ── Job 3: Deploy ────────────────────────────────────────────
+  deploy:
+    name: Deploy to EKS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/production-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Apply K8s manifests
+        run: |
+          kubectl apply -f infrastructure/k8s/namespace.yaml
+          kubectl apply -f infrastructure/k8s/upload-service/secrets.yaml
+          kubectl apply -f infrastructure/k8s/upload-service/deployment.yaml
+          # Apply combined ingress that covers both auth + upload routes
+          kubectl apply -f infrastructure/k8s/upload-service/ingress.yaml
+
+      - name: Update image
+        run: |
+          IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.image-tag }}
+          kubectl set image deployment/${{ env.SERVICE_NAME }} \
+            ${{ env.SERVICE_NAME }}=$IMAGE \
+            -n ${{ env.K8S_NAMESPACE }}
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/${{ env.SERVICE_NAME }} \
+            -n ${{ env.K8S_NAMESPACE }} \
+            --timeout=300s
+
+      - name: Verify
+        run: |
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }} -l app=${{ env.SERVICE_NAME }}
+          echo "✅ Upload Service deployed! Tag: ${{ needs.build-and-push.outputs.image-tag }}"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed — rolling back"
+          kubectl rollout undo deployment/${{ env.SERVICE_NAME }} -n ${{ env.K8S_NAMESPACE }}

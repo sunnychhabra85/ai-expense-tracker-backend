@@ -1,0 +1,214 @@
+# =============================================================
+# docker-compose.yml — Complete Local Development Stack
+# Runs ALL 5 microservices + Postgres + Redis + LocalStack
+# Usage: docker-compose up -d
+# =============================================================
+
+version: '3.9'
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: finance_postgres
+    environment:
+      POSTGRES_DB: financedb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: localpassword123
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d financedb']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: finance_redis
+    ports:
+      - '6379:6379'
+    command: redis-server --requirepass localredispass
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', 'localredispass', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: finance_localstack
+    ports:
+      - '4566:4566'
+    environment:
+      SERVICES: s3,sqs,textract
+      AWS_DEFAULT_REGION: us-east-1
+      LOCALSTACK_HOST: localstack
+    volumes:
+      - localstackdata:/var/lib/localstack
+      - ./infrastructure/scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Application Services ───────────────────────────────────
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+      target: runner
+    container_name: finance_auth
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: development
+      PORT: '3001'
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
+      JWT_ACCESS_SECRET: local-dev-access-secret-min-32-chars-ok
+      JWT_REFRESH_SECRET: local-dev-refresh-secret-different-value
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      BCRYPT_ROUNDS: '10'
+      ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3001/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  upload-service:
+    build:
+      context: .
+      dockerfile: apps/upload-service/Dockerfile
+      target: runner
+    container_name: finance_upload
+    ports:
+      - '3002:3002'
+    environment:
+      NODE_ENV: development
+      PORT: '3002'
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
+      JWT_ACCESS_SECRET: local-dev-access-secret-min-32-chars-ok
+      AWS_REGION: us-east-1
+      AWS_S3_BUCKET: finance-platform-uploads-dev
+      AWS_SQS_PROCESSING_URL: http://localstack:4566/000000000000/document-processing
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3002/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  processing-service:
+    build:
+      context: .
+      dockerfile: apps/processing-service/Dockerfile
+      target: runner
+    container_name: finance_processing
+    ports:
+      - '3003:3003'
+    environment:
+      NODE_ENV: development
+      PORT: '3003'
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
+      AWS_REGION: us-east-1
+      AWS_S3_BUCKET: finance-platform-uploads-dev
+      AWS_SQS_PROCESSING_URL: http://localstack:4566/000000000000/document-processing
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      ANTHROPIC_API_KEY: ''  # Set your key here to enable AI categorization
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3003/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: apps/analytics-service/Dockerfile
+      target: runner
+    container_name: finance_analytics
+    ports:
+      - '3004:3004'
+    environment:
+      NODE_ENV: development
+      PORT: '3004'
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
+      JWT_ACCESS_SECRET: local-dev-access-secret-min-32-chars-ok
+      REDIS_URL: redis://:localredispass@redis:6379
+      CACHE_TTL_SECONDS: '300'
+      ANTHROPIC_API_KEY: ''  # Set your key here to enable AI chatbot
+      ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3004/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: apps/notification-service/Dockerfile
+      target: runner
+    container_name: finance_notification
+    ports:
+      - '3005:3005'
+    environment:
+      NODE_ENV: development
+      PORT: '3005'
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
+      JWT_ACCESS_SECRET: local-dev-access-secret-min-32-chars-ok
+      ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3005/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    name: finance_pgdata
+  localstackdata:
+    name: finance_localstack
+
+networks:
+  default:
+    name: finance_network
