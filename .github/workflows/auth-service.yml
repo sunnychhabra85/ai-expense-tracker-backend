@@ -184,9 +184,9 @@ jobs:
       - name: Apply K8s manifests (secrets, service, ingress)
         run: |
           kubectl apply -f infrastructure/k8s/namespace.yaml
+          kubectl apply -f infrastructure/k8s/ingress.yaml
           kubectl apply -f infrastructure/k8s/auth-service/secrets.yaml
           kubectl apply -f infrastructure/k8s/auth-service/deployment.yaml
-          kubectl apply -f infrastructure/k8s/auth-service/ingress.yaml
 
       - name: Update deployment image
         run: |

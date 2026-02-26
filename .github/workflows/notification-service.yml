@@ -180,9 +180,10 @@ jobs:
             --name ${{ env.EKS_CLUSTER }} \
             --region ${{ env.AWS_REGION }}
 
-      - name: Apply K8s manifests (secrets, deployment)
+      - name: Apply K8s manifests (secrets, deployment, ingress)
         run: |
           kubectl apply -f infrastructure/k8s/namespace.yaml
+          kubectl apply -f infrastructure/k8s/ingress.yaml
           kubectl apply -f infrastructure/k8s/notification-service/secrets.yaml
           kubectl apply -f infrastructure/k8s/notification-service/deployment.yaml
 
