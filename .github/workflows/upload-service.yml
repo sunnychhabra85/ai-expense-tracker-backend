@@ -165,10 +165,9 @@ jobs:
       - name: Apply K8s manifests
         run: |
           kubectl apply -f infrastructure/k8s/namespace.yaml
+          kubectl apply -f infrastructure/k8s/ingress.yaml
           kubectl apply -f infrastructure/k8s/upload-service/secrets.yaml
           kubectl apply -f infrastructure/k8s/upload-service/deployment.yaml
-          # Apply combined ingress that covers both auth + upload routes
-          kubectl apply -f infrastructure/k8s/upload-service/ingress.yaml
 
       - name: Update image
         run: |
