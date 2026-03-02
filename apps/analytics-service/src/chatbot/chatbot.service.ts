@@ -1,12 +1,12 @@
 // =============================================================
 // apps/analytics-service/src/chatbot/chatbot.service.ts
-// AI Spending Assistant — RAG pattern using Anthropic Claude
+// AI Spending Assistant — RAG pattern using OpenAI
 // =============================================================
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AnalyticsService } from '../analytics/analytics.service';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 export interface ChatMessage { role: 'user' | 'assistant'; content: string; }
 
@@ -20,7 +20,7 @@ export class ChatbotService {
   ) {}
 
   async chat(userId: string, userMessage: string, history: ChatMessage[] = []): Promise<string> {
-    const apiKey = this.config.get<string>('analytics.anthropicApiKey');
+    const apiKey = this.config.get<string>('analytics.openaiApiKey');
     if (!apiKey) {
       return this.mockResponse(userMessage);
     }
@@ -52,22 +52,22 @@ IMPORTANT RULES:
 4. Keep responses concise and friendly (2-4 sentences max unless explaining trends)
 5. Use ₹ symbol for Indian Rupees`;
 
-    // ── Step 3: Call Anthropic with conversation history ───────
-    const client = new Anthropic({ apiKey });
+    // ── Step 3: Call OpenAI with conversation history ──────────
+    const client = new OpenAI({ apiKey });
 
-    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system' as const, content: systemPrompt },
       ...history.map((h) => ({ role: h.role, content: h.content })),
       { role: 'user' as const, content: userMessage },
     ];
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001', // Fast + cheap for chat
+    const response = await client.chat.completions.create({
+      model: 'gpt-3.5-turbo', // Fast + cheap for chat
       max_tokens: this.config.get<number>('analytics.chatMaxTokens', 500),
-      system: systemPrompt,
       messages,
     });
 
-    return response.content[0].text;
+    return response.choices[0].message.content || '';
   }
 
   // ── Fallback when no API key is configured ────────────────────
