@@ -12,15 +12,17 @@ RUN npx prisma generate --schema=libs/database/prisma/schema.prisma
 RUN npx nx build database --prod
 RUN npx nx build analytics-service --prod
 
+FROM node:20-alpine AS prod-deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --frozen-lockfile
+
 FROM node:20-alpine AS runner
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/tsconfig.production.json ./tsconfig.json
-RUN chown -R appuser:appgroup /app
+COPY --from=prod-deps /app/node_modules ./node_modules
 USER appuser
 EXPOSE 3004
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
