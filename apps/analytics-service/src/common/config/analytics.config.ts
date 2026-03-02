@@ -19,7 +19,7 @@ export default registerAs('analytics', () => {
       url: process.env.REDIS_URL || 'redis://localhost:6379',
       cacheTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '300', 10),
     },
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
     // Max tokens for chatbot response
     chatMaxTokens: parseInt(process.env.CHAT_MAX_TOKENS || '500', 10),
   };

@@ -20,8 +20,8 @@ export default registerAs('processing', () => {
       sqsQueueUrl: process.env.AWS_SQS_PROCESSING_URL,
       endpointUrl: process.env.AWS_ENDPOINT_URL,
     },
-    // Anthropic AI for categorization fallback
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    // OpenAI for categorization fallback
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
     // How many SQS messages to process simultaneously
     sqsConcurrency: parseInt(process.env.SQS_CONCURRENCY || '3', 10),
     sqsWaitTimeSeconds: 20,

@@ -10,7 +10,6 @@
     "prisma:migrate:prod": "prisma migrate deploy --schema=libs/database/prisma/schema.prisma"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.20.0",
     "@aws-sdk/client-s3": "^3.995.0",
     "@aws-sdk/client-sqs": "^3.995.0",
     "@aws-sdk/client-textract": "^3.500.0",
@@ -27,6 +26,7 @@
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "openai": "^4.104.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
