@@ -206,18 +206,76 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         parsed.map((t) => t.description),
       );
 
-      // ── Step 5: Bulk insert transactions ──────────────────────
-      await this.db.transaction.createMany({
-        data: parsed.map((tx, i) => ({
-          documentId,
-          date: tx.date,
-          description: tx.description,
-          amount: tx.amount,
-          type: tx.type,
-          category: categories[i],
-          rawText: tx.rawText,
-        })),
+      // ── Step 5: Filter out duplicate transactions ───────────────
+      // Check if identical transactions already exist for this user
+      // Match by: date + description + amount + type
+      const existingTransactions = await this.db.transaction.findMany({
+        where: {
+          document: { userId },
+          OR: parsed.map((tx) => ({
+            date: tx.date,
+            description: tx.description,
+            amount: tx.amount,
+            type: tx.type,
+          })),
+        },
+        select: { date: true, description: true, amount: true, type: true },
       });
+
+      // Create signature set for fast duplicate lookup
+      const existingSignatures = new Set(
+        existingTransactions.map(
+          (tx) =>
+            `${tx.date.toISOString()}-${tx.description}-${tx.amount.toString()}-${tx.type}`,
+        ),
+      );
+
+      // Filter out transactions that already exist
+      const transactionsToInsert = parsed
+        .map((tx, i) => ({
+          transaction: tx,
+          category: categories[i],
+          signature: `${tx.date.toISOString()}-${tx.description}-${tx.amount.toString()}-${tx.type}`,
+        }))
+        .filter((item) => !existingSignatures.has(item.signature))
+        .map((item) => ({
+          documentId,
+          date: item.transaction.date,
+          description: item.transaction.description,
+          amount: item.transaction.amount,
+          type: item.transaction.type,
+          category: item.category,
+          rawText: item.transaction.rawText,
+        }));
+
+      const duplicateCount = parsed.length - transactionsToInsert.length;
+
+      // ── Step 5b: Insert only unique transactions ────────────────
+      if (transactionsToInsert.length > 0) {
+        await this.db.transaction.createMany({
+          data: transactionsToInsert,
+        });
+
+        this.logger.log(
+          JSON.stringify({
+            type: 'transactions_inserted',
+            documentId,
+            totalParsed: parsed.length,
+            inserted: transactionsToInsert.length,
+            duplicatesSkipped: duplicateCount,
+            correlationId,
+          }),
+        );
+      } else {
+        this.logger.warn(
+          JSON.stringify({
+            type: 'all_transactions_duplicates',
+            documentId,
+            totalParsed: parsed.length,
+            correlationId,
+          }),
+        );
+      }
 
       // ── Step 6: Update status → COMPLETED ─────────────────────
       await this.updateDocumentStatus(documentId, 'COMPLETED');
@@ -229,7 +287,9 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         JSON.stringify({
           type: 'processing_complete',
           documentId,
-          transactionCount: parsed.length,
+          transactionCount: transactionsToInsert.length,
+          totalParsed: parsed.length,
+          duplicatesSkipped: duplicateCount,
           correlationId,
         }),
       );
