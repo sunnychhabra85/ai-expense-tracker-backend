@@ -65,6 +65,27 @@ export class UploadService {
       );
     }
 
+    // ── Check for duplicate uploads ─────────────────────────────
+    // Prevent uploading the same file (same name + size) multiple times
+    // Allow retry only if previous attempt FAILED
+    const existingDocument = await this.db.document.findFirst({
+      where: {
+        userId,
+        fileName: dto.fileName,
+        fileSize: dto.fileSize,
+        status: { in: ['UPLOADED', 'EXTRACTING', 'COMPLETED'] },
+      },
+      select: { id: true, status: true, createdAt: true },
+    });
+
+    if (existingDocument) {
+      throw new BadRequestException(
+        `Duplicate file detected. You have already uploaded "${dto.fileName}" ` +
+          `(Status: ${existingDocument.status}). ` +
+          `Please use the existing document or delete it before uploading again.`,
+      );
+    }
+
     // ── Create document record with PENDING status ─────────────
     // We use a pre-generated documentId so S3 key and DB record
     // reference the same identifier from the start
