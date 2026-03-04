@@ -39,6 +39,10 @@ export default registerAs('app', () => {
 
     // ── Security ─────────────────────────────────────────────
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
-    allowedOrigins: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
+    allowedOrigins:  process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) || [
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'http://localhost:8081',
+    ]
   };
 });

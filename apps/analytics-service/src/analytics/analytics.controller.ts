@@ -59,8 +59,8 @@ export class AnalyticsController {
   async getTransactions(@Req() req: any, @Query() query: any) {
     const data = await this.analyticsService.getTransactions(req.user.id, {
       documentId: query.documentId,
-      page: parseInt(query.page) || 1,
-      pageSize: parseInt(query.pageSize) || 20,
+      page: query.page ? parseInt(query.page) : undefined,
+      pageSize: query.pageSize ? parseInt(query.pageSize) : undefined,
       category: query.category,
       type: query.type,
       search: query.search,

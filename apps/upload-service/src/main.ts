@@ -39,11 +39,33 @@ async function bootstrap() {
     new CorrelationInterceptor(), // Adds x-correlation-id to every request
     // new LoggingInterceptor(),     // Logs request/response with timing
   );
-
+  logger.log('Global interceptors registered: CorrelationInterceptor', process.env.ALLOWED_ORIGINS);
   // ── CORS ────────────────────────────────────────────────────
+   const allowedOrigins =
+    process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) || [
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'http://localhost:8081',
+    ];
+  logger.log(`Allowed CORS origins: ${JSON.stringify(allowedOrigins)}`);
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: (origin, callback) => {
+      logger.log(`CORS check for origin: ${origin}`);
+      logger.log(`CORS check for origin condition: ${!origin || allowedOrigins.includes(origin)}`);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.log(`CORS blocked for origin: ${origin}`);
+        callback(new Error('CORS not allowed'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-correlation-id',
+    ],
   });
 
   // ── Swagger (dev only) ──────────────────────────────────────

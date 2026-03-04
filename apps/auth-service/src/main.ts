@@ -1,6 +1,6 @@
 // =============================================================
 // apps/auth-service/src/main.ts
-// Entry point for the Auth Service
+// Production-ready NestJS bootstrap
 // =============================================================
 
 import 'reflect-metadata';
@@ -8,68 +8,108 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const logger = new Logger('AuthService');
+
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn', 'debug'],
   });
 
-  // Ensure SIGTERM/SIGINT from Kubernetes trigger graceful shutdown
+  // ──────────────────────────────────────────────────────────
+  // Graceful shutdown (important for Kubernetes)
+  // ──────────────────────────────────────────────────────────
   app.enableShutdownHooks();
 
-  // ── Global prefix ───────────────────────────────────────────
-  // All routes: /api/v1/auth/...
+  // ──────────────────────────────────────────────────────────
+  // Security headers
+  // ──────────────────────────────────────────────────────────
+  app.use(helmet());
+
+  // ──────────────────────────────────────────────────────────
+  // API prefix
+  // Example: /api/v1/auth/login
+  // ──────────────────────────────────────────────────────────
   app.setGlobalPrefix('api/v1');
 
-  // ── Validation ─────────────────────────────────────────────
-  // Automatically validates all incoming DTOs using class-validator
+  // ──────────────────────────────────────────────────────────
+  // Validation
+  // ──────────────────────────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,        // Strip unknown properties
-      forbidNonWhitelisted: true, // Throw error on unknown properties
-      transform: true,        // Auto-transform types (string → number etc.)
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
   );
 
-  // ── CORS ────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────
+  // CORS (single clean configuration)
+  // ──────────────────────────────────────────────────────────
+  logger.log(`Configuring CORS with allowed origins: ${process.env.ALLOWED_ORIGINS}`);
+  logger.log(`Configuring CORS with allowed origins: ${JSON.stringify(process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()))}`);
+  const allowedOrigins =
+    process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) || [
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'http://localhost:8081',
+    ];
+  logger.log(`Allowed CORS origins: ${JSON.stringify(allowedOrigins)}`);
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: (origin, callback) => {
+      logger.log(`CORS check for origin: ${origin}`);
+      logger.log(`CORS check for origin condition: ${!origin || allowedOrigins.includes(origin)}`);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.log(`CORS blocked for origin: ${origin}`);
+        callback(new Error('CORS not allowed'));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-correlation-id',
+    ],
   });
 
-  // ── Swagger (non-production only) ──────────────────────────────────
-  // Wrapped in try/catch so a Swagger metadata error (e.g. a controller
-  // parameter missing type metadata) can NEVER crash the process.
-  // The app must always start; probes must always be reachable.
+  // ──────────────────────────────────────────────────────────
+  // Swagger (only in dev)
+  // ──────────────────────────────────────────────────────────
   if (process.env.NODE_ENV !== 'production') {
     try {
       const config = new DocumentBuilder()
         .setTitle('Auth Service API')
-        .setDescription('Authentication & Authorization endpoints')
+        .setDescription('Authentication & Authorization Service')
         .setVersion('1.0')
         .addBearerAuth()
         .build();
+
       const document = SwaggerModule.createDocument(app, config);
+
       SwaggerModule.setup('api/docs', app, document);
-      logger.log('Swagger available at /api/docs');
-    } catch (swaggerError) {
-      // Log clearly so the developer sees it immediately, then continue
-      // booting.  Health probes still respond; the service still works.
+
+      logger.log('Swagger running at /api/docs');
+    } catch (error) {
       logger.warn(
-        `Swagger init failed — docs will be unavailable: ${
-          (swaggerError as Error).message
-        }`,
+        `Swagger failed to initialize: ${(error as Error).message}`,
       );
     }
   }
 
+  // ──────────────────────────────────────────────────────────
+  // Start server
+  // ──────────────────────────────────────────────────────────
   const port = process.env.PORT || 3001;
+
   await app.listen(port, '0.0.0.0');
+
   logger.log(`Auth Service running on port ${port}`);
 }
 
