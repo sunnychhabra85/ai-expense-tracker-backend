@@ -19,13 +19,43 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-  // Enable CORS for health check endpoints
+  // ── CORS (supports web and mobile apps) ────────────────────
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'http://localhost:8081',
+  ];
+  const envOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter((o) => o.length > 0)
+    : [];
+  const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+  logger.log(`Allowed CORS origins: ${JSON.stringify(allowedOrigins)}`);
+  
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
-      'http://localhost:3000',
-      'http://localhost:8080',
-      'http://localhost:8081',
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      
+      // Check against explicit allowed origins
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      
+      // In development, allow local network IPs (for mobile devices)
+      if (isDevelopment && (origin.startsWith('http://192.168.') || origin.startsWith('http://10.'))) {
+        callback(null, true);
+        return;
+      }
+      
+      logger.warn(`CORS blocked for origin: ${origin}`);
+      callback(new Error('CORS not allowed'));
+    },
     credentials: true,
   });
 
