@@ -19,6 +19,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
+  // Enable CORS for health check endpoints
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'http://localhost:8081',
+    ],
+    credentials: true,
+  });
+
   const port = process.env.PORT || 3003;
   await app.listen(port);
 

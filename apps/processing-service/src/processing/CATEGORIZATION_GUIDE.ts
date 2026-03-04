@@ -218,25 +218,33 @@ const categories = await this.categorizer.categorizeBatch(
 // =============================================================
 
 export const SAMPLE_TRANSACTIONS = [
-  // Should match via exact phrase
-  { description: 'SYSTEMATIC INVESTMENT PLAN', expected: 'Investment' },
-  
-  // Should match via pattern
-  { description: 'ATM-CASH/NAYA RLY STN', expected: 'Cash Withdrawal' },
-  { description: 'UPI/P2M/280542149884/Mr MAYUR SAHNI', expected: 'Transfer' },
-  
-  // Should match via keyword
+  // High-confidence vendor matches
   { description: 'SWIGGY ORDER #12345', expected: 'Food & Dining' },
+  { description: 'BIGBASKET GROCERIES', expected: 'Groceries' },
   { description: 'UBER TRIP TO AIRPORT', expected: 'Transportation' },
+  { description: 'HPCL PETROL PUMP', expected: 'Fuel' },
   
-  // Should escalate to AI (no clear rules)
+  // Shopping & Entertainment
+  { description: 'AMAZON SHOPPING', expected: 'Shopping' },
+  { description: 'NETFLIX SUBSCRIPTION', expected: 'Subscriptions' },
+  { description: 'PVR CINEMAS TICKET', expected: 'Entertainment' },
+  
+  // Bills & Services
+  { description: 'ELECTRICITY BILL PAYMENT', expected: 'Bills & Utilities' },
+  { description: 'AIRTEL MOBILE RECHARGE', expected: 'Mobile & Internet' },
+  { description: 'APOLLO PHARMACY', expected: 'Healthcare' },
+  { description: 'SCHOOL FEES PAYMENT', expected: 'Education' },
+  { description: 'LIC PREMIUM PAYMENT', expected: 'Insurance' },
+  
+  // Should use AI fallback for ambiguous cases
   { description: 'TACO BELL DOWNTOWN', expected: 'Food & Dining' },
   { description: 'DENTAL CLINIC VISIT', expected: 'Healthcare' },
   
-  // Edge cases
-  { description: 'SALARY CREDIT', expected: 'Salary' },
-  { description: 'EMI-HDFC HOME LOAN', expected: 'Bills & Utilities' },
-  { description: 'AMAZON PRIME VIDEO', expected: 'Entertainment' },
+  // Non-expense transactions → Others
+  { description: 'SALARY CREDIT', expected: 'Others' },
+  { description: 'ATM-CASH WITHDRAWAL', expected: 'Others' },
+  { description: 'MUTUAL FUND SIP ZERODHA', expected: 'Others' },
+  { description: 'NEFT TRANSFER TO JOHN DOE', expected: 'Others' },
 ];
 
 export default SAMPLE_TRANSACTIONS;

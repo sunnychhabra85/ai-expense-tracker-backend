@@ -189,6 +189,25 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(JSON.stringify({ type: 'processing_start', documentId, correlationId }));
 
     try {
+      // ── Step 0: Verify document exists in database ─────────────
+      const documentExists = await this.db.document.findUnique({
+        where: { id: documentId },
+        select: { id: true },
+      });
+
+      if (!documentExists) {
+        this.logger.warn(
+          JSON.stringify({
+            type: 'document_not_found',
+            documentId,
+            message: 'Document not found in database, deleting SQS message',
+            correlationId,
+          }),
+        );
+        await this.deleteMessage(message.ReceiptHandle);
+        return;
+      }
+
       // ── Step 1: Update status → EXTRACTING ────────────────────
       await this.updateDocumentStatus(documentId, 'EXTRACTING');
 
@@ -201,9 +220,34 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         throw new Error('No transactions found in document');
       }
 
+      // ── Step 3b: Filter to DEBIT transactions only (expenses) ──
+      // We only categorize and track debit transactions (expenses)
+      // Skip credits (income, deposits, refunds, reversals)
+      const debitTransactions = parsed.filter((tx) => tx.type === 'DEBIT');
+      
+      this.logger.log(
+        JSON.stringify({
+          type: 'transactions_filtered',
+          documentId,
+          totalParsed: parsed.length,
+          debitTransactions: debitTransactions.length,
+          creditTransactions: parsed.length - debitTransactions.length,
+          correlationId,
+        }),
+      );
+
+      if (debitTransactions.length === 0) {
+        this.logger.warn(`No debit transactions found in document ${documentId}`);
+        // Still mark as completed even if no debits found
+        await this.updateDocumentStatus(documentId, 'COMPLETED');
+        await this.deleteMessage(message.ReceiptHandle);
+        return;
+      }
+
       // ── Step 4: Categorize each transaction ────────────────────
-      const categories = await this.categorizer.categorizeBatch(
-        parsed.map((t) => t.description),
+      // Returns detailed results (category + confidence + method)
+      const categoryResults = await this.categorizer.categorizeBatch(
+        debitTransactions.map((t) => t.description),
       );
 
       // ── Step 5: Filter out duplicate transactions ───────────────
@@ -212,7 +256,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       const existingTransactions = await this.db.transaction.findMany({
         where: {
           document: { userId },
-          OR: parsed.map((tx) => ({
+          OR: debitTransactions.map((tx) => ({
             date: tx.date,
             description: tx.description,
             amount: tx.amount,
@@ -231,10 +275,10 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       );
 
       // Filter out transactions that already exist
-      const transactionsToInsert = parsed
+      const transactionsToInsert = debitTransactions
         .map((tx, i) => ({
           transaction: tx,
-          category: categories[i],
+          category: categoryResults[i],
           signature: `${tx.date.toISOString()}-${tx.description}-${tx.amount.toString()}-${tx.type}`,
         }))
         .filter((item) => !existingSignatures.has(item.signature))
@@ -248,7 +292,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
           rawText: item.transaction.rawText,
         }));
 
-      const duplicateCount = parsed.length - transactionsToInsert.length;
+      const duplicateCount = debitTransactions.length - transactionsToInsert.length;
 
       // ── Step 5b: Insert only unique transactions ────────────────
       if (transactionsToInsert.length > 0) {
@@ -261,6 +305,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
             type: 'transactions_inserted',
             documentId,
             totalParsed: parsed.length,
+            debitTransactions: debitTransactions.length,
             inserted: transactionsToInsert.length,
             duplicatesSkipped: duplicateCount,
             correlationId,
@@ -357,10 +402,20 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async updateDocumentStatus(id: string, status: string, errorMsg?: string) {
-    await this.db.document.update({
-      where: { id },
-      data: { status: status as any, errorMsg: errorMsg || null },
-    });
+    try {
+      // Use updateMany to avoid throwing if document doesn't exist
+      const result = await this.db.document.updateMany({
+        where: { id },
+        data: { status: status as any, errorMsg: errorMsg || null },
+      });
+
+      if (result.count === 0) {
+        this.logger.warn(`Document ${id} not found during status update to '${status}'`);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to update document ${id} status: ${err.message}`);
+      // Don't throw - allow processing to continue or fail gracefully
+    }
   }
 
   private async deleteMessage(receiptHandle: string) {

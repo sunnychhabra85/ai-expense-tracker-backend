@@ -170,29 +170,30 @@ export class CategorizerService {
   }
 
   private matchKeyword(normalized: string): CategorizationResult | null {
-    let bestMatch: CategorizationResult | null = null;
-    let maxMatches = 0;
-
+    // Rules are pre-sorted by priority (high → low).
+    // Return the FIRST rule that has any keyword match so that
+    // high-priority rules always beat lower-priority ones,
+    // regardless of how many keywords match.
     for (const rule of this.rules) {
       if (!rule.keywords) continue;
-      
-      // Count how many keywords match
-      const matchCount = rule.keywords.filter((kw) =>
-        normalized.includes(kw.toLowerCase())
-      ).length;
 
-      if (matchCount > maxMatches) {
-        maxMatches = matchCount;
-        bestMatch = {
+      const matched = rule.keywords.filter((kw) =>
+        normalized.includes(kw.toLowerCase())
+      );
+
+      if (matched.length > 0) {
+        // More keyword hits within the same rule → higher confidence
+        const confidence = Math.min(0.60 + matched.length * 0.08, 0.88);
+        return {
           category: rule.category,
-          confidence: Math.min(0.6 + (matchCount * 0.1), 0.9), // More keywords = higher confidence
+          confidence,
           method: 'keyword',
-          matchedRule: `${matchCount} keywords`,
+          matchedRule: matched.join(', '),
         };
       }
     }
 
-    return bestMatch;
+    return null;
   }
 
   private async fallbackToAI(description: string): Promise<CategorizationResult> {
@@ -234,7 +235,7 @@ export class CategorizerService {
     const categoryList = categories.join(', ');
 
     const response = await client.chat.completions.create({
-      model: 'gpt-3.5-turbo',//'gpt-4o-mini', // Cost-effective model for categorization
+      model: 'gpt-3.5-turbo', //'gpt-4o-mini', // Cost-effective model for categorization
       max_tokens: 20,
       temperature: 0.1, // Low temperature for consistent categorization
       messages: [
@@ -244,17 +245,27 @@ export class CategorizerService {
         },
         {
           role: 'user',
-          content: `Analyze this bank transaction and assign it to EXACTLY ONE category.
+          content: `Analyze this Indian bank transaction and assign it to EXACTLY ONE category.
 
 Available Categories: ${categoryList}
 
 Transaction Description: "${description}"
 
 Rules:
-- Choose the MOST SPECIFIC category that fits
-- If it's a UPI/IMPS/NEFT transfer with no context, use "Transfer"
-- If it's ATM withdrawal, use "Cash Withdrawal"
-- If unclear, use "Others"
+- UPI/P2M with merchant name → Identify the merchant type (e.g., UPI SWIGGY → Food & Dining)
+- Restaurant/Hotel/Food delivery → Food & Dining
+- Supermarket/Grocery store → Groceries
+- Cab/Train/Flight/Metro/Parking → Transportation
+- Petrol/Diesel/Fuel → Fuel
+- Amazon/Flipkart/Online shopping → Shopping
+- Mobile recharge/Internet bill → Mobile & Internet
+- Electricity/Water/Maintenance → Bills & Utilities
+- Hospital/Pharmacy/Medical → Healthcare
+- School/College fees → Education
+- Netflix/Spotify/OTT → Subscriptions
+- Movie/Theatre → Entertainment
+- LIC/Insurance → Insurance
+- ATM withdrawal, Salary, Investment, Bank transfer, Loan payment → Others
 
 Category:`,
         },

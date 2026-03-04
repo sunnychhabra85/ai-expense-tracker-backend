@@ -55,13 +55,7 @@ async function testCategorization() {
   console.log(`Passed: ${passed} (${((passed / SAMPLE_TRANSACTIONS.length) * 100).toFixed(1)}%)`);
   console.log(`Failed: ${failed} (${((failed / SAMPLE_TRANSACTIONS.length) * 100).toFixed(1)}%)`);
   
-  const stats = categorizer.getStatistics();
-  console.log('\n📈 METHOD BREAKDOWN');
-  console.log('='.repeat(70));
-  Object.entries(stats.byMethod).forEach(([method, count]) => {
-    const percentage = (count / stats.total * 100).toFixed(1);
-    console.log(`${method.padEnd(15)}: ${count.toString().padStart(3)} (${percentage}%)`);
-  });
+  console.log('\n(Run with individual categorizeWithDetails calls to see per-method breakdown)');
   
   console.log('\n✨ Test complete!');
 }

@@ -143,9 +143,11 @@ export class AnalyticsService {
       toDate?: string;
     },
   ) {
+    // If no page is provided, return all transactions (no pagination)
+    const usePagination = opts.page !== undefined;
     const page = opts.page || 1;
-    const pageSize = Math.min(opts.pageSize || 20, 100);
-    const skip = (page - 1) * pageSize;
+    const pageSize = usePagination ? Math.min(opts.pageSize || 20, 100) : undefined;
+    const skip = usePagination ? (page - 1) * (pageSize || 20) : undefined;
 
     const where: any = { document: { userId } };
     if (opts.documentId) where.documentId = opts.documentId;
@@ -163,13 +165,17 @@ export class AnalyticsService {
         where,
         select: { id: true, date: true, description: true, amount: true, type: true, category: true },
         orderBy: { date: 'desc' },
-        skip,
-        take: pageSize,
+        ...(usePagination && { skip, take: pageSize }),
       }),
       this.db.transaction.count({ where }),
     ]);
 
-    return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+    if (usePagination) {
+      return { items, total, page, pageSize, totalPages: Math.ceil(total / (pageSize || 20)) };
+    } else {
+      // Return all transactions without pagination metadata
+      return { items, total };
+    }
   }
 
   // ── Build AI context summary ──────────────────────────────────
