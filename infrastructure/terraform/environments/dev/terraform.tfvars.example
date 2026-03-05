@@ -1,0 +1,7 @@
+aws_region         = "ap-south-1"
+environment        = "dev"
+project_name       = "finance-platform"
+node_instance_types = ["t3.small"]
+desired_size       = 1
+min_size           = 1
+max_size           = 2

@@ -1,0 +1,51 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finance-platform-ingress
+  namespace: finance-platform
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/load-balancer-name: finance-platform-alb
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 80
+          - path: /api/upload
+            pathType: Prefix
+            backend:
+              service:
+                name: upload-service
+                port:
+                  number: 80
+          - path: /api/transactions
+            pathType: Prefix
+            backend:
+              service:
+                name: analytics-service
+                port:
+                  number: 80
+          - path: /api/analytics
+            pathType: Prefix
+            backend:
+              service:
+                name: analytics-service
+                port:
+                  number: 80
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 80

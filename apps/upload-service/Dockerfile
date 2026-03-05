@@ -1,46 +1,45 @@
-# =============================================================
-# apps/upload-service/Dockerfile
-# Multi-stage build — identical pattern to auth-service
-# Only the target name changes: upload-service
-# =============================================================
-
-FROM node:20-alpine AS deps
+ARG SERVICE_NAME=upload-service
+ARG PORT=3002
+# syntax=docker/dockerfile:1.7
+FROM node:20-alpine AS base
 WORKDIR /app
+
+FROM base AS deps
 COPY package*.json ./
-RUN npm ci --frozen-lockfile
+RUN npm ci --include=dev && npm cache clean --force
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM deps AS builder
 COPY . .
-
 RUN npx prisma generate --schema=libs/database/prisma/schema.prisma
 RUN npx nx build database --prod
 RUN npx nx build shared-types --prod
-RUN npx nx build upload-service --prod
+ARG SERVICE_NAME
+RUN npx nx build ${SERVICE_NAME} --prod
 
-FROM node:20-alpine AS prod-deps
-WORKDIR /app
+FROM base AS prod-deps
 COPY package*.json ./
-RUN npm ci --omit=dev --frozen-lockfile
+RUN npm ci --omit=dev && npm cache clean --force
 
 FROM node:20-alpine AS runner
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
+RUN apk add --no-cache tini wget \
+  && addgroup -S appgroup \
+  && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig.production.json ./tsconfig.json
 COPY --from=prod-deps /app/node_modules ./node_modules
 
+ARG SERVICE_NAME
+ARG PORT
+ENV NODE_ENV=production \
+    SERVICE_NAME=${SERVICE_NAME} \
+    PORT=${PORT}
+
 USER appuser
-
-EXPOSE 3002
-
+EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:3002/api/v1/health || exit 1
+  CMD wget -qO- http://localhost:${PORT}/api/v1/health || exit 1
 
-ENV NODE_ENV=production
-ENV PORT=3002
-ENV SERVICE_NAME=upload-service
-
-CMD ["node", "-r", "tsconfig-paths/register", "dist/apps/upload-service/apps/upload-service/src/main.js"]
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["sh", "-c", "node -r tsconfig-paths/register dist/apps/${SERVICE_NAME}/src/main.js"]

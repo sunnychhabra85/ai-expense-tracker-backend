@@ -188,11 +188,11 @@ terraform apply tfplan
 aws eks update-kubeconfig --name production-cluster --region ap-south-1
 
 # 4. Deploy applications
-kubectl apply -f ../k8s/namespace.yaml
-kubectl apply -f ../k8s/ingress.yaml
+kubectl apply -f ../k8s/base/namespace.yaml
 for svc in auth-service upload-service processing-service analytics-service notification-service; do
-  kubectl apply -f ../k8s/$svc/
+  kubectl apply -f ../k8s/$svc/all.yaml
 done
+kubectl apply -f ../k8s/base/ingress.yaml
 ```
 
 ## Swagger Docs (Dev Only)
@@ -202,3 +202,9 @@ done
 
 ## Environment Variables
 See `.env.example` for all variables. For production, all secrets are stored in AWS Secrets Manager and synced via External Secrets Operator.
+
+
+## DevOps Artifacts
+- Terraform modules: `infrastructure/terraform/modules/*`
+- Kubernetes manifests: `infrastructure/k8s/*`
+- CI/CD pipeline: `.github/workflows/cicd.yml`

@@ -1,0 +1,12 @@
+variable "project_name" { type = string }
+variable "environment" { type = string }
+variable "kubernetes_version" { type = string }
+variable "subnet_ids" { type = list(string) }
+variable "node_subnet_ids" { type = list(string) }
+variable "cluster_sg_id" { type = string }
+variable "node_sg_id" { type = string }
+variable "instance_types" { type = list(string) }
+variable "desired_size" { type = number }
+variable "min_size" { type = number }
+variable "max_size" { type = number }
+variable "tags" { type = map(string) }
