@@ -208,3 +208,4 @@ See `.env.example` for all variables. For production, all secrets are stored in 
 - Terraform modules: `infrastructure/terraform/modules/*`
 - Kubernetes manifests: `infrastructure/k8s/*`
 - CI/CD pipeline: `.github/workflows/cicd.yml`
+- Step-by-step guide: `infrastructure/STEP_BY_STEP_GUIDE.md`

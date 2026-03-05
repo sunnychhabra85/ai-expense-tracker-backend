@@ -18,3 +18,7 @@ GitHub Actions implements:
 5. deploy
 
 Images are tagged with both commit SHA and `latest`.
+
+
+## Beginner walkthrough
+Follow the full implementation guide: `infrastructure/STEP_BY_STEP_GUIDE.md`.
