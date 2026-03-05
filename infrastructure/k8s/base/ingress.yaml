@@ -14,35 +14,35 @@ spec:
   rules:
     - http:
         paths:
-          - path: /api/auth
+          - path: /api/v1/auth
             pathType: Prefix
             backend:
               service:
                 name: auth-service
                 port:
                   number: 80
-          - path: /api/upload
+          - path: /api/v1/upload
             pathType: Prefix
             backend:
               service:
                 name: upload-service
                 port:
                   number: 80
-          - path: /api/transactions
+          - path: /api/v1/transactions
             pathType: Prefix
             backend:
               service:
                 name: analytics-service
                 port:
                   number: 80
-          - path: /api/analytics
+          - path: /api/v1/analytics
             pathType: Prefix
             backend:
               service:
                 name: analytics-service
                 port:
                   number: 80
-          - path: /api/notifications
+          - path: /api/v1/notifications
             pathType: Prefix
             backend:
               service:
