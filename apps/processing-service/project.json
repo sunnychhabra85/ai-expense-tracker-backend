@@ -8,7 +8,7 @@
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/apps/processing-service"],
       "options": {
-        "command": "tsc -p apps/processing-service/tsconfig.app.json"
+        "command": "tsc -p apps/processing-service/tsconfig.build.json"
       }
     },
     "serve": {

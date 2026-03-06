@@ -17,8 +17,8 @@ resource "aws_subnet" "public" {
   availability_zone       = var.azs[tonumber(each.key)]
   map_public_ip_on_launch = true
   tags = merge(var.tags, {
-    Name                                      = "${var.project_name}-${var.environment}-public-${each.key}"
-    "kubernetes.io/role/elb"                 = "1"
+    Name                                                           = "${var.project_name}-${var.environment}-public-${each.key}"
+    "kubernetes.io/role/elb"                                       = "1"
     "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "shared"
   })
 }
@@ -29,8 +29,8 @@ resource "aws_subnet" "private" {
   cidr_block        = each.value
   availability_zone = var.azs[tonumber(each.key)]
   tags = merge(var.tags, {
-    Name                                               = "${var.project_name}-${var.environment}-private-${each.key}"
-    "kubernetes.io/role/internal-elb"                 = "1"
+    Name                                                           = "${var.project_name}-${var.environment}-private-${each.key}"
+    "kubernetes.io/role/internal-elb"                              = "1"
     "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "shared"
   })
 }
@@ -81,15 +81,15 @@ resource "aws_security_group" "eks_cluster" {
   name_prefix = "${var.project_name}-${var.environment}-eks-cluster"
   vpc_id      = aws_vpc.this.id
   ingress {
-    from_port = 443
-    to_port   = 443
-    protocol  = "tcp"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
   egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = var.tags
@@ -111,9 +111,9 @@ resource "aws_security_group" "eks_node" {
     security_groups = [aws_security_group.eks_cluster.id]
   }
   egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = var.tags

@@ -1,31 +1,84 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: finance-platform-local-ingress
+  name: finance-platform-health-ingress
   namespace: finance-platform
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/health$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx
   rules:
     - host: localhost
       http:
         paths:
-          - path: /api/auth(/|$)(.*)
+          - path: /api/(auth/)?health(/.*)?
             pathType: ImplementationSpecific
             backend:
               service:
                 name: auth-service
                 port:
                   number: 80
-          - path: /api/upload(/|$)(.*)
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finance-platform-auth-ingress
+  namespace: finance-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/auth$1
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /api/auth(/.*)?
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finance-platform-upload-ingress
+  namespace: finance-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/upload$1
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /api/upload(/.*)?
             pathType: ImplementationSpecific
             backend:
               service:
                 name: upload-service
                 port:
                   number: 80
-          - path: /api/transactions(/|$)(.*)
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finance-platform-transactions-ingress
+  namespace: finance-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/transactions$1
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /api/transactions(/.*)?
             pathType: ImplementationSpecific
             backend:
               service:

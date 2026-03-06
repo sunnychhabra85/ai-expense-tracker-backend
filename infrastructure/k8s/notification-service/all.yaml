@@ -14,8 +14,8 @@ metadata:
   namespace: finance-platform
 type: Opaque
 stringData:
-  DATABASE_URL: ""
-  JWT_SECRET: ""
+  DATABASE_URL: "postgresql://admin:localpassword123@postgres:5432/financedb"
+  JWT_ACCESS_SECRET: "local-dev-access-secret-min-32-chars-ok"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -34,8 +34,10 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: REPLACE_WITH_ECR/notification-service:latest
-          imagePullPolicy: Always
+          # image: REPLACE_WITH_ECR/notification-service:latest
+          # imagePullPolicy: Always
+          image: notification-service:local
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3005
           envFrom:

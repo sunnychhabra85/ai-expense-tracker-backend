@@ -14,9 +14,9 @@ metadata:
   namespace: finance-platform
 type: Opaque
 stringData:
-  DATABASE_URL: ""
-  JWT_ACCESS_SECRET: ""
-  JWT_REFRESH_SECRET: ""
+  DATABASE_URL: "postgresql://admin:localpassword123@postgres:5432/financedb"
+  JWT_ACCESS_SECRET: "local-dev-access-secret-min-32-chars-ok"
+  JWT_REFRESH_SECRET: "local-dev-refresh-secret-different-value"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -35,8 +35,10 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: REPLACE_WITH_ECR/auth-service:latest
-          imagePullPolicy: Always
+          # image: REPLACE_WITH_ECR/auth-service:latest
+          # imagePullPolicy: Always
+          image: auth-service:local
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
           envFrom:

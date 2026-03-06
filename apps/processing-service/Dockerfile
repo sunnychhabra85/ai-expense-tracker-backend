@@ -22,13 +22,14 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache tini wget \
+RUN apk add --no-cache tini wget openssl \
   && addgroup -S appgroup \
   && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig.production.json ./tsconfig.json
 COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 ARG SERVICE_NAME
 ARG PORT
