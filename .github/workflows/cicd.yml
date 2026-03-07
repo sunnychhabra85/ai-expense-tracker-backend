@@ -105,8 +105,25 @@ jobs:
           kubectl apply -f infrastructure/k8s/base/postgres.yaml
           kubectl apply -f infrastructure/k8s/base/redis.yaml
           
-          # Wait for databases to be ready
-          kubectl wait --for=condition=Ready pod -l app=postgres -n finance-platform --timeout=180s
+          # Wait for databases to be ready (with retries)
+          echo "Waiting for PostgreSQL..."
+          for i in {1..60}; do
+            if kubectl wait --for=condition=Ready pod -l app=postgres -n finance-platform --timeout=10s 2>/dev/null; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... attempt $i/60"
+            kubectl get pods -l app=postgres -n finance-platform
+            if [ $i -eq 60 ]; then
+              echo "PostgreSQL failed to become ready"
+              kubectl describe pod -l app=postgres -n finance-platform
+              kubectl logs -l app=postgres -n finance-platform --tail=50
+              exit 1
+            fi
+            sleep 3
+          done
+          
+          echo "Waiting for Redis..."
           kubectl wait --for=condition=Ready pod -l app=redis -n finance-platform --timeout=180s
           
           # Run database migrations
