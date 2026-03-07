@@ -16,11 +16,12 @@ type: Opaque
 stringData:
   DATABASE_URL: "postgresql://admin:localpassword123@postgres:5432/financedb"
   AWS_REGION: "ap-south-1"
-  AWS_S3_BUCKET: "finance-platform-uploads-dev"
-  AWS_SQS_PROCESSING_URL: "http://192.168.0.252:4566/000000000000/document-processing"
-  AWS_ENDPOINT_URL: "http://192.168.0.252:4566"
-  AWS_ACCESS_KEY_ID: "test"
-  AWS_SECRET_ACCESS_KEY: "test"
+  # S3 and SQS not configured in minimal deployment
+  # AWS_S3_BUCKET: "finance-platform-uploads-dev"
+  # AWS_SQS_PROCESSING_URL: "http://192.168.0.252:4566/000000000000/document-processing"
+  # AWS_ENDPOINT_URL: "http://192.168.0.252:4566"
+  # AWS_ACCESS_KEY_ID: "test"
+  # AWS_SECRET_ACCESS_KEY: "test"
   OPENAI_API_KEY: ""
 ---
 apiVersion: apps/v1
@@ -30,6 +31,8 @@ metadata:
   namespace: finance-platform
 spec:
   replicas: 1
+  strategy:
+    type: Recreate  # Use Recreate for single-node t3.small to avoid resource exhaustion
   selector:
     matchLabels:
       app: processing-service
@@ -64,12 +67,16 @@ spec:
               port: 3003
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /api/v1/health
               port: 3003
             initialDelaySeconds: 30
             periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
