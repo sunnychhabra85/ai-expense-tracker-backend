@@ -36,6 +36,11 @@ service_names = [
   "notification-service"
 ]
 
+# ALB Controller Configuration
+# Note: ALB adds ~$16-20/month (~$0.0225/hour + data transfer)
+enable_alb_controller  = true
+alb_controller_version = "1.7.1"
+
 # ========================================
 # ADDITIONAL COST OPTIMIZATIONS
 # ========================================
