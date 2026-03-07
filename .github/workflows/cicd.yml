@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: ap-south-1
-  EKS_CLUSTER_NAME: finance-platform-dev
+  EKS_CLUSTER_NAME: finance-platform-dev-minimal
 
 jobs:
   install-test:
