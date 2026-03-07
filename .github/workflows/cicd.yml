@@ -129,7 +129,26 @@ jobs:
           done
           
           echo "Waiting for Redis..."
-          kubectl wait --for=condition=Ready pod -l app=redis -n finance-platform --timeout=180s
+          for i in {1..60}; do
+            # Check if at least one redis pod is ready
+            READY_PODS=$(kubectl get pods -l app=redis -n finance-platform --field-selector=status.phase=Running -o name 2>/dev/null | wc -l)
+            if [ "$READY_PODS" -ge 1 ]; then
+              # Double check the pod is actually ready
+              if kubectl get pods -l app=redis -n finance-platform -o json | grep -q '"type":"Ready","status":"True"'; then
+                echo "Redis is ready (at least one pod running)"
+                break
+              fi
+            fi
+            echo "Waiting for Redis... attempt $i/60"
+            kubectl get pods -l app=redis -n finance-platform
+            if [ $i -eq 60 ]; then
+              echo "Redis failed to become ready"
+              kubectl describe pod -l app=redis -n finance-platform
+              kubectl logs -l app=redis -n finance-platform --tail=50
+              exit 1
+            fi
+            sleep 3
+          done
           
           # Run database migrations
           REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com
