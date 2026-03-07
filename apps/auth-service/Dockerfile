@@ -30,6 +30,14 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig.production.json ./tsconfig.json
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy Prisma CLI for migrations
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy Prisma schema file for migrations
+COPY --from=builder /app/libs/database/prisma ./libs/database/prisma
+# Create writable directory for Prisma engines and migrations
+RUN mkdir -p /app/node_modules/@prisma/engines \
+  && chown -R appuser:appgroup /app/node_modules/@prisma
 
 ARG SERVICE_NAME
 ARG PORT

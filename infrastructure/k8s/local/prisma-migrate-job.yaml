@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prisma-migrate-job
+  namespace: finance-platform
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      name: prisma-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migrate
+        image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/auth-service:migrate-fix2
+        command: ["sh", "-c"]
+        args:
+          - |
+            cd /app
+            npx prisma migrate deploy --schema=libs/database/prisma/schema.prisma
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://admin:localpassword123@postgres:5432/financedb"
+        - name: HOME
+          value: "/tmp"
+        - name: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING
+          value: "1"
+        - name: PRISMA_QUERY_ENGINE_LIBRARY
+          value: "/app/node_modules/.prisma/client/libquery_engine-linux-musl.so.node"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
