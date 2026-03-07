@@ -1,32 +1,46 @@
-# apps/processing-service/Dockerfile
-FROM node:20-alpine AS deps
+ARG SERVICE_NAME=processing-service
+ARG PORT=3003
+# syntax=docker/dockerfile:1.7
+FROM node:20-alpine AS base
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --frozen-lockfile
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM base AS deps
+COPY package*.json ./
+RUN npm ci --include=dev && npm cache clean --force
+
+FROM deps AS builder
 COPY . .
 RUN npx prisma generate --schema=libs/database/prisma/schema.prisma
 RUN npx nx build database --prod
-RUN npx nx build processing-service --prod
+RUN npx nx build shared-types --prod
+ARG SERVICE_NAME
+RUN npx nx build ${SERVICE_NAME} --prod
 
-FROM node:20-alpine AS prod-deps
-WORKDIR /app
+FROM base AS prod-deps
 COPY package*.json ./
-RUN npm ci --omit=dev --frozen-lockfile
+RUN npm ci --omit=dev && npm cache clean --force
 
 FROM node:20-alpine AS runner
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
+RUN apk add --no-cache tini wget openssl \
+  && addgroup -S appgroup \
+  && adduser -S appuser -G appgroup
+
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig.production.json ./tsconfig.json
 COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+ARG SERVICE_NAME
+ARG PORT
+ENV NODE_ENV=production \
+    SERVICE_NAME=${SERVICE_NAME} \
+    PORT=${PORT}
+
 USER appuser
-EXPOSE 3003
+EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:3003/api/v1/health || exit 1
-ENV NODE_ENV=production
-ENV PORT=3003
-CMD ["node", "-r", "tsconfig-paths/register", "dist/apps/processing-service/apps/processing-service/src/main.js"]
+  CMD wget -qO- http://localhost:${PORT}/api/v1/health || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["sh", "-c", "node -r tsconfig-paths/register dist/apps/${SERVICE_NAME}/src/main.js"]

@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: processing-service-config
+  namespace: finance-platform
+data:
+  NODE_ENV: production
+  PORT: "3003"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: processing-service-secret
+  namespace: finance-platform
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://admin:localpassword123@postgres:5432/financedb"
+  AWS_REGION: "ap-south-1"
+  AWS_S3_BUCKET: "finance-platform-uploads-dev"
+  AWS_SQS_PROCESSING_URL: "http://192.168.0.252:4566/000000000000/document-processing"
+  AWS_ENDPOINT_URL: "http://192.168.0.252:4566"
+  AWS_ACCESS_KEY_ID: "test"
+  AWS_SECRET_ACCESS_KEY: "test"
+  OPENAI_API_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: processing-service
+  namespace: finance-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: processing-service
+  template:
+    metadata:
+      labels:
+        app: processing-service
+    spec:
+      containers:
+        - name: processing-service
+          image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/processing-service:latest
+          imagePullPolicy: Always
+          # image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/processing-service:latest
+          # imagePullPolicy: Always
+          ports:
+            - containerPort: 3003
+          envFrom:
+            - configMapRef:
+                name: processing-service-config
+            - secretRef:
+                name: processing-service-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3003
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: processing-service
+  namespace: finance-platform
+spec:
+  selector:
+    app: processing-service
+  ports:
+    - port: 80
+      targetPort: 3003
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: processing-service-hpa
+  namespace: finance-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: processing-service
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

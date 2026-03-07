@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analytics-service-config
+  namespace: finance-platform
+data:
+  NODE_ENV: production
+  PORT: "3004"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: analytics-service-secret
+  namespace: finance-platform
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://admin:localpassword123@postgres:5432/financedb"
+  JWT_ACCESS_SECRET: "local-dev-access-secret-min-32-chars-ok"
+  REDIS_URL: "redis://:localredispass@redis:6379"
+  OPENAI_API_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: finance-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/analytics-service:latest
+          imagePullPolicy: Always
+          # image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/analytics-service:latest
+          # imagePullPolicy: Always
+          ports:
+            - containerPort: 3004
+          envFrom:
+            - configMapRef:
+                name: analytics-service-config
+            - secretRef:
+                name: analytics-service-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3004
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: finance-platform
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - port: 80
+      targetPort: 3004
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: analytics-service-hpa
+  namespace: finance-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: analytics-service
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
