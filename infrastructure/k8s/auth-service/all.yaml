@@ -35,10 +35,10 @@ spec:
     spec:
       containers:
         - name: auth-service
-          # image: REPLACE_WITH_ECR/auth-service:latest
+          image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/auth-service:latest
+          imagePullPolicy: Always
+          # image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/auth-service:latest
           # imagePullPolicy: Always
-          image: auth-service:local
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
           envFrom:

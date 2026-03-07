@@ -36,10 +36,10 @@ spec:
     spec:
       containers:
         - name: analytics-service
-          #image: REPLACE_WITH_ECR/analytics-service:latest
-          #imagePullPolicy: Always
-          image: analytics-service:local
-          imagePullPolicy: IfNotPresent
+          image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/analytics-service:latest
+          imagePullPolicy: Always
+          # image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/analytics-service:latest
+          # imagePullPolicy: Always
           ports:
             - containerPort: 3004
           envFrom:

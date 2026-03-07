@@ -40,10 +40,10 @@ spec:
     spec:
       containers:
         - name: upload-service
-          # image: REPLACE_WITH_ECR/upload-service:latest
+          image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/upload-service:latest
+          imagePullPolicy: Always
+          # image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/upload-service:latest
           # imagePullPolicy: Always
-          image: upload-service:local
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3002
           envFrom:

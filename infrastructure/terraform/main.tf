@@ -39,8 +39,9 @@ module "eks" {
   project_name       = var.project_name
   environment        = var.environment
   kubernetes_version = var.kubernetes_version
-  subnet_ids         = module.network.private_subnet_ids
-  node_subnet_ids    = module.network.private_subnet_ids
+  # Use public subnets when private subnets are empty (for cost optimization)
+  subnet_ids         = length(var.private_subnet_cidrs) > 0 ? module.network.private_subnet_ids : module.network.public_subnet_ids
+  node_subnet_ids    = length(var.private_subnet_cidrs) > 0 ? module.network.private_subnet_ids : module.network.public_subnet_ids
   cluster_sg_id      = module.network.eks_cluster_sg_id
   node_sg_id         = module.network.eks_node_sg_id
   instance_types     = var.node_instance_types

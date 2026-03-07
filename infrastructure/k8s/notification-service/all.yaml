@@ -34,10 +34,10 @@ spec:
     spec:
       containers:
         - name: notification-service
-          # image: REPLACE_WITH_ECR/notification-service:latest
+          image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/notification-service:latest
+          imagePullPolicy: Always
+          # image: 014071048720.dkr.ecr.ap-south-1.amazonaws.com/finance-platform/dev/notification-service:latest
           # imagePullPolicy: Always
-          image: notification-service:local
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3005
           envFrom:

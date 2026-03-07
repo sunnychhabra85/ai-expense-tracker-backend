@@ -36,12 +36,14 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
+  count  = length(var.private_subnet_cidrs) > 0 ? 1 : 0
   domain = "vpc"
   tags   = merge(var.tags, { Name = "${var.project_name}-${var.environment}-nat-eip" })
 }
 
 resource "aws_nat_gateway" "this" {
-  allocation_id = aws_eip.nat.id
+  count         = length(var.private_subnet_cidrs) > 0 ? 1 : 0
+  allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public["0"].id
   tags          = merge(var.tags, { Name = "${var.project_name}-${var.environment}-nat" })
   depends_on    = [aws_internet_gateway.this]
@@ -63,10 +65,11 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_route_table" "private" {
+  count  = length(var.private_subnet_cidrs) > 0 ? 1 : 0
   vpc_id = aws_vpc.this.id
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.this.id
+    nat_gateway_id = aws_nat_gateway.this[0].id
   }
   tags = merge(var.tags, { Name = "${var.project_name}-${var.environment}-private-rt" })
 }
@@ -74,7 +77,7 @@ resource "aws_route_table" "private" {
 resource "aws_route_table_association" "private" {
   for_each       = aws_subnet.private
   subnet_id      = each.value.id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[0].id
 }
 
 resource "aws_security_group" "eks_cluster" {

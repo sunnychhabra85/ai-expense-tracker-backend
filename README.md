@@ -40,6 +40,43 @@ A production-ready microservices platform built with NestJS, PostgreSQL, AWS (S3
 | analytics-service    | 3004 | Dashboard APIs, AI chatbot (Anthropic)                          |
 | notification-service | 3005 | SSE real-time document status updates                           |
 
+## 🚀 Deployment Options
+
+Choose your deployment path based on your needs:
+
+| Option | Cost (5hrs) | Cost (Month) | Best For | Setup Time |
+|--------|-------------|--------------|----------|------------|
+| **Local (Kind)** ⭐ | **$0** | **$0** | Development, testing | 5 min |
+| **Minimal AWS** 💰 | **$0.60** | **$86** | AWS testing, demos | 15 min |
+| **Standard AWS** 💵 | $1.90 | $274 | Production-like | 20 min |
+| **AWS ECS** 📦 | — | $106 | Simple production | 25 min |
+
+### Quick Deploy Commands
+
+```bash
+# Local Kubernetes (FREE - Already working!)
+kubectl get pods -n finance-platform
+curl http://localhost:8080/api/auth/health
+
+# Minimal AWS (Cost-optimized)
+.\scripts\deploy-aws-minimal.ps1          # Windows
+./scripts/deploy-aws-minimal.sh           # Linux/Mac
+
+# Standard AWS (Production-like)
+.\scripts\deploy-aws.ps1 -DeploymentType eks
+./scripts/deploy-aws.sh eks
+```
+
+### 📚 Deployment Documentation
+
+- **[AWS Deployment Guide](DEPLOYMENT_GUIDE.md)** — Complete step-by-step guide for ECS & EKS
+- **[Cost Optimization Guide](infrastructure/COST_OPTIMIZATION.md)** — Detailed cost breakdown & strategies
+- **[Cost Quick Reference](COST_QUICK_REFERENCE.md)** — Fast cost comparison & commands
+- **[Quick Command Reference](QUICK_REFERENCE.md)** — Daily operations cheat sheet
+- **[Kubernetes Local Testing](infrastructure/LOCAL_TESTING_WORKFLOW.md)** — Kind cluster guide
+
+**💡 Recommendation:** Use the FREE local Kind cluster for development. It's already running on `http://localhost:8080` and provides the same experience as AWS!
+
 ## Quick Start (Local Dev)
 
 ### 1. Clone & Install
