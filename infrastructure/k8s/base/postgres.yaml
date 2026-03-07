@@ -23,6 +23,8 @@ metadata:
   namespace: finance-platform
 spec:
   replicas: 1
+  strategy:
+    type: Recreate  # Avoid two pods during updates on small nodes
   selector:
     matchLabels:
       app: postgres
