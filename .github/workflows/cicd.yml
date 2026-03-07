@@ -108,14 +108,11 @@ jobs:
           # Wait for databases to be ready (with retries)
           echo "Waiting for PostgreSQL..."
           for i in {1..60}; do
-            # Check if at least one postgres pod is ready (simplified check)
-            READY_PODS=$(kubectl get pods -l app=postgres -n finance-platform --field-selector=status.phase=Running -o name 2>/dev/null | wc -l)
-            if [ "$READY_PODS" -ge 1 ]; then
-              # Double check the pod is actually ready
-              if kubectl get pods -l app=postgres -n finance-platform -o json | grep -q '"type":"Ready","status":"True"'; then
-                echo "PostgreSQL is ready (at least one pod running)"
-                break
-              fi
+            # Check if at least one postgres pod shows 1/1 ready
+            READY_COUNT=$(kubectl get pods -l app=postgres -n finance-platform -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
+            if [ "$READY_COUNT" == "true" ]; then
+              echo "PostgreSQL is ready"
+              break
             fi
             echo "Waiting for PostgreSQL... attempt $i/60"
             kubectl get pods -l app=postgres -n finance-platform
@@ -130,14 +127,11 @@ jobs:
           
           echo "Waiting for Redis..."
           for i in {1..60}; do
-            # Check if at least one redis pod is ready
-            READY_PODS=$(kubectl get pods -l app=redis -n finance-platform --field-selector=status.phase=Running -o name 2>/dev/null | wc -l)
-            if [ "$READY_PODS" -ge 1 ]; then
-              # Double check the pod is actually ready
-              if kubectl get pods -l app=redis -n finance-platform -o json | grep -q '"type":"Ready","status":"True"'; then
-                echo "Redis is ready (at least one pod running)"
-                break
-              fi
+            # Check if at least one redis pod shows 1/1 ready
+            READY_COUNT=$(kubectl get pods -l app=redis -n finance-platform -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
+            if [ "$READY_COUNT" == "true" ]; then
+              echo "Redis is ready"
+              break
             fi
             echo "Waiting for Redis... attempt $i/60"
             kubectl get pods -l app=redis -n finance-platform
