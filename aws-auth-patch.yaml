@@ -1,0 +1,4 @@
+- rolearn: arn:aws:iam::014071048720:role/GitHubActionsDeployRole
+  username: github-actions
+  groups:
+    - system:masters
