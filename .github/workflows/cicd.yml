@@ -100,6 +100,26 @@ jobs:
       - name: Deploy
         run: |
           kubectl apply -f infrastructure/k8s/base/namespace.yaml
+          
+          # Deploy databases first
+          kubectl apply -f infrastructure/k8s/base/postgres.yaml
+          kubectl apply -f infrastructure/k8s/base/redis.yaml
+          
+          # Wait for databases to be ready
+          kubectl wait --for=condition=Ready pod -l app=postgres -n finance-platform --timeout=180s
+          kubectl wait --for=condition=Ready pod -l app=redis -n finance-platform --timeout=180s
+          
+          # Run database migrations
+          REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com
+          kubectl delete pod prisma-migrate -n finance-platform --ignore-not-found=true
+          kubectl run prisma-migrate \
+            --image=${REGISTRY}/finance-platform/dev/auth-service:${GITHUB_SHA} \
+            --restart=Never \
+            --namespace=finance-platform \
+            --env="DATABASE_URL=postgresql://admin:localpassword123@postgres:5432/financedb" \
+            --command -- sh -c "npx prisma migrate deploy --schema=/app/libs/database/prisma/schema.prisma" || true
+          
+          # Deploy application services
           kubectl apply -f infrastructure/k8s/auth-service/all.yaml
           kubectl apply -f infrastructure/k8s/upload-service/all.yaml
           kubectl apply -f infrastructure/k8s/processing-service/all.yaml
