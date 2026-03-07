@@ -20,6 +20,7 @@ const mockDb = {
   document: {
     create: jest.fn(),
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     update: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
@@ -72,6 +73,7 @@ describe('UploadService', () => {
   // ── requestPresignedUrl ────────────────────────────────────
   describe('requestPresignedUrl', () => {
     it('should generate presigned URL for valid PDF', async () => {
+      mockDb.document.findFirst.mockResolvedValue(null); // No existing document
       mockS3Service.generatePresignedPutUrl.mockResolvedValue({
         uploadUrl: 'https://s3.example.com/presigned',
         s3Key: MOCK_S3_KEY,
