@@ -43,7 +43,7 @@ export class HealthController {
 
   // ── Readiness: Is the service ready for traffic? ─────────────
   // K8s stops routing traffic to this pod if this fails
-  // Checks: DB connection + S3 bucket accessibility
+  // Checks: DB connection + S3 bucket accessibility (if configured)
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe — checks DB and S3' })
   async readiness() {
@@ -55,17 +55,22 @@ export class HealthController {
     checks.database = dbOk ? 'UP' : 'DOWN';
     if (!dbOk) allHealthy = false;
 
-    // Check S3 bucket accessibility
-    try {
-      await this.s3.send(
-        new HeadBucketCommand({
-          Bucket: this.config.get<string>('upload.s3.bucket'),
-        }),
-      );
-      checks.s3 = 'UP';
-    } catch {
-      checks.s3 = 'DOWN';
-      allHealthy = false;
+    // Check S3 bucket accessibility (only if bucket is configured)
+    const bucketName = this.config.get<string>('upload.s3.bucket');
+    if (bucketName) {
+      try {
+        await this.s3.send(
+          new HeadBucketCommand({
+            Bucket: bucketName,
+          }),
+        );
+        checks.s3 = 'UP';
+      } catch {
+        checks.s3 = 'DOWN';
+        allHealthy = false;
+      }
+    } else {
+      checks.s3 = 'SKIPPED (not configured)';
     }
 
     const status = allHealthy ? 200 : 503;
