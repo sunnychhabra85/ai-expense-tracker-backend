@@ -2,6 +2,18 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_ca)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      command     = "aws"
+    }
+  }
+}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -49,4 +61,18 @@ module "eks" {
   min_size           = var.min_size
   max_size           = var.max_size
   tags               = local.common_tags
+}
+
+module "alb_controller" {
+  source = "./modules/alb-controller"
+
+  project_name            = var.project_name
+  environment             = var.environment
+  cluster_name            = module.eks.cluster_name
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+  vpc_id                  = module.network.vpc_id
+  create_oidc_provider    = var.enable_alb_controller
+  install_alb_controller  = var.enable_alb_controller
+  alb_controller_version  = var.alb_controller_version
+  tags                    = local.common_tags
 }

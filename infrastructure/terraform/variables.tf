@@ -57,3 +57,15 @@ variable "max_size" {
   type    = number
   default = 2
 }
+
+variable "enable_alb_controller" {
+  description = "Whether to enable AWS Load Balancer Controller"
+  type        = bool
+  default     = true
+}
+
+variable "alb_controller_version" {
+  description = "Version of AWS Load Balancer Controller Helm chart"
+  type        = string
+  default     = "1.7.1"
+}
