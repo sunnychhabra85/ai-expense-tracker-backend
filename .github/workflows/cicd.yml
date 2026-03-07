@@ -108,11 +108,14 @@ jobs:
           # Wait for databases to be ready (with retries)
           echo "Waiting for PostgreSQL..."
           for i in {1..60}; do
-            # Check if at least one postgres pod is ready
-            READY_PODS=$(kubectl get pods -l app=postgres -n finance-platform -o jsonpath='{.items[?(@.status.conditions[?(@.type=="Ready")].status=="True")].metadata.name}' | wc -w)
+            # Check if at least one postgres pod is ready (simplified check)
+            READY_PODS=$(kubectl get pods -l app=postgres -n finance-platform --field-selector=status.phase=Running -o name 2>/dev/null | wc -l)
             if [ "$READY_PODS" -ge 1 ]; then
-              echo "PostgreSQL is ready (at least one pod running)"
-              break
+              # Double check the pod is actually ready
+              if kubectl get pods -l app=postgres -n finance-platform -o json | grep -q '"type":"Ready","status":"True"'; then
+                echo "PostgreSQL is ready (at least one pod running)"
+                break
+              fi
             fi
             echo "Waiting for PostgreSQL... attempt $i/60"
             kubectl get pods -l app=postgres -n finance-platform
