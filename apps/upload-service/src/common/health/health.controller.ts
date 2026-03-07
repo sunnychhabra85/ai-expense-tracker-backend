@@ -59,14 +59,19 @@ export class HealthController {
     const bucketName = this.config.get<string>('upload.s3.bucket');
     if (bucketName) {
       try {
-        await this.s3.send(
+        // Add 2-second timeout to prevent hanging
+        const s3Check = this.s3.send(
           new HeadBucketCommand({
             Bucket: bucketName,
           }),
         );
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('S3 check timeout')), 2000),
+        );
+        await Promise.race([s3Check, timeout]);
         checks.s3 = 'UP';
-      } catch {
-        checks.s3 = 'DOWN';
+      } catch (error) {
+        checks.s3 = `DOWN (${error.message || 'unknown error'})`;
         allHealthy = false;
       }
     } else {

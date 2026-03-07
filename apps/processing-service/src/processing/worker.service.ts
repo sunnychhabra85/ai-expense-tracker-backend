@@ -72,6 +72,12 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
+    // Skip worker initialization if SQS is not configured (minimal deployment)
+    if (!this.queueUrl || !this.s3Bucket) {
+      this.logger.warn('SQS/S3 not configured. Worker will not start (health checks only).');
+      return;
+    }
+
     this.isRunning = true;
     await this.ensureQueueUrlResolved();
     this.logger.log('SQS worker started — polling for messages');

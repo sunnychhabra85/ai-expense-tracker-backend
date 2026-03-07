@@ -25,6 +25,8 @@ metadata:
   namespace: finance-platform
 spec:
   replicas: 1
+  strategy:
+    type: Recreate  # Use Recreate for single-node t3.small to avoid resource exhaustion
   selector:
     matchLabels:
       app: auth-service
