@@ -17,7 +17,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localpassword123}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -60,6 +60,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: finance_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
 
   # ── Application Services ───────────────────────────────────
 
@@ -210,6 +225,8 @@ services:
 volumes:
   pgdata:
     name: finance_pgdata
+  pgadmin_data:
+    name: finance_pgadmin
   localstackdata:
     name: finance_localstack
 

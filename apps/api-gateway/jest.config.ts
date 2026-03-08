@@ -1,0 +1,25 @@
+import type { Config } from 'jest';
+
+const config: Config = {
+  displayName: 'api-gateway',
+  preset: '../../jest.preset.js',
+  testEnvironment: 'node',
+  transform: {
+    '^.+\\.[tj]s$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+      },
+    ],
+  },
+  moduleFileExtensions: ['ts', 'js', 'html'],
+  coverageDirectory: '../../coverage/apps/api-gateway',
+  collectCoverageFrom: [
+    'src/**/*.{ts,js}',
+    '!src/**/*.spec.{ts,js}',
+    '!src/**/*.test.{ts,js}',
+    '!src/main.ts',
+  ],
+};
+
+export default config;
