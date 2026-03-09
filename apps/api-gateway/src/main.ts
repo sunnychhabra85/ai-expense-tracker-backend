@@ -9,6 +9,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import { CorrelationInterceptor } from './common/interceptors/correlation.interceptor';
 
 async function bootstrap() {
   const logger = new Logger('ApiGateway');
@@ -26,6 +27,11 @@ async function bootstrap() {
   // Security headers
   // ──────────────────────────────────────────────────────────
   app.use(helmet());
+
+  // ──────────────────────────────────────────────────────────
+  // Correlation ID for request tracing
+  // ──────────────────────────────────────────────────────────
+  app.useGlobalInterceptors(new CorrelationInterceptor());
 
   // ──────────────────────────────────────────────────────────
   // API prefix
@@ -61,6 +67,7 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id'],
+    exposedHeaders: ['x-correlation-id'],
   });
 
   logger.log(`CORS enabled for origins: ${allowedOrigins.join(', ')}`);
