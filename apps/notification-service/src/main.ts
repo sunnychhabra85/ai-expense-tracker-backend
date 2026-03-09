@@ -22,6 +22,7 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id'],
+    exposedHeaders: ['x-correlation-id'],
   });
 
   const port = process.env.PORT || 3005;

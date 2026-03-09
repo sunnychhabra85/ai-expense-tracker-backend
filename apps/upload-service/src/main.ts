@@ -66,6 +66,7 @@ async function bootstrap() {
       'Authorization',
       'x-correlation-id',
     ],
+    exposedHeaders: ['x-correlation-id'],
   });
 
   // ── Swagger (dev only) ──────────────────────────────────────
