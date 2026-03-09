@@ -1,0 +1,15 @@
+# =============================================================
+# Grafana Dashboard ConfigMap
+# Apply with: kubectl apply -f grafana-dashboards-configmap.yaml
+# =============================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finance-platform-dashboards
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  finance-platform-overview.json: |
+    {{- (.Files.Get "grafana-dashboard-overview.json") | nindent 4 }}

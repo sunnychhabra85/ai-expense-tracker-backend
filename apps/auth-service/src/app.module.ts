@@ -10,6 +10,7 @@ import { DatabaseModule } from '@finance/database';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './common/health/health.module';
+import { MetricsModule } from '@finance/shared-monitoring';
 import appConfig from './common/config/app.config';
 
 @Module({
@@ -47,6 +48,7 @@ import appConfig from './common/config/app.config';
     AuthModule,
     UsersModule,
     HealthModule,
+    MetricsModule,
   ],
 })
 export class AppModule {}

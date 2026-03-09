@@ -9,6 +9,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from '../../../libs/database/src/database.module';
 import { UploadModule } from './upload/upload.module';
 import { HealthModule } from './common/health/health.module';
+import { MetricsModule } from '@finance/shared-monitoring';
 import uploadConfig from './common/config/upload.config';
 
 @Module({
@@ -36,6 +37,7 @@ import uploadConfig from './common/config/upload.config';
     // ── Feature Modules ─────────────────────────────────────────
     UploadModule,
     HealthModule,
+    MetricsModule,
   ],
 })
 export class AppModule {}
