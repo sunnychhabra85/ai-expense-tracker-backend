@@ -11,7 +11,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const logger = new Logger('NotificationService');
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'metrics', method: RequestMethod.GET }, { path: 'health', method: RequestMethod.GET }],
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [

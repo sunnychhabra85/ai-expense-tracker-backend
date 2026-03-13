@@ -5,7 +5,7 @@
 // =============================================================
 
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { Logger, RequestMethod } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -17,7 +17,9 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'metrics', method: RequestMethod.GET }, { path: 'health', method: RequestMethod.GET }],
+  });
 
   // Enable CORS for health check endpoints
   app.enableCors({

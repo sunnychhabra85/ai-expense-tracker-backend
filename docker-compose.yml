@@ -78,6 +78,44 @@ services:
 
   # ── Application Services ───────────────────────────────────
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+      target: runner
+    container_name: finance_api_gateway
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: "3000"
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-ok}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-dev-refresh-secret-different-value}
+      # Microservice URLs
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:3001}
+      UPLOAD_SERVICE_URL: ${UPLOAD_SERVICE_URL:-http://upload-service:3002}
+      PROCESSING_SERVICE_URL: ${PROCESSING_SERVICE_URL:-http://processing-service:3003}
+      ANALYTICS_SERVICE_URL: ${ANALYTICS_SERVICE_URL:-http://analytics-service:3004}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:3005}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      upload-service:
+        condition: service_healthy
+      processing-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     build:
       context: .
@@ -89,7 +127,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: "3001"
-      DATABASE_URL: ${DATABASE_URL:-postgresql://admin:localpassword123@postgres:5432/financedb}
+      # Override .env with Docker internal hostname
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-ok}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-dev-refresh-secret-different-value}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
@@ -117,12 +156,14 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: "3002"
-      DATABASE_URL: ${DATABASE_URL:-postgresql://admin:localpassword123@postgres:5432/financedb}
+      # Override .env with Docker internal hostnames
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-ok}
       AWS_REGION: ${AWS_REGION:-ap-south-1}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET:-finance-platform-uploads-dev}
-      AWS_SQS_PROCESSING_URL: ${AWS_SQS_PROCESSING_URL:-http://localstack:4566/000000000000/document-processing}
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      AWS_SQS_PROCESSING_URL: http://localstack:4566/000000000000/document-processing
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_PUBLIC_ENDPOINT_URL: http://localhost:4566
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
@@ -149,11 +190,13 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: "3003"
-      DATABASE_URL: ${DATABASE_URL:-postgresql://admin:localpassword123@postgres:5432/financedb}
+      # Override .env with Docker internal hostnames
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
       AWS_REGION: ${AWS_REGION:-ap-south-1}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET:-finance-platform-uploads-dev}
-      AWS_SQS_PROCESSING_URL: ${AWS_SQS_PROCESSING_URL:-http://localstack:4566/000000000000/document-processing}
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      AWS_SQS_PROCESSING_URL: http://localstack:4566/000000000000/document-processing
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_PUBLIC_ENDPOINT_URL: http://localhost:4566
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -180,9 +223,10 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: "3004"
-      DATABASE_URL: ${DATABASE_URL:-postgresql://admin:localpassword123@postgres:5432/financedb}
+      # Override .env with Docker internal hostnames
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-ok}
-      REDIS_URL: ${REDIS_URL:-redis://:localredispass@redis:6379}
+      REDIS_URL: redis://:localredispass@redis:6379
       CACHE_TTL_SECONDS: "300"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
@@ -209,7 +253,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: "3005"
-      DATABASE_URL: ${DATABASE_URL:-postgresql://admin:localpassword123@postgres:5432/financedb}
+      # Override .env with Docker internal hostnames
+      DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-ok}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
     depends_on:

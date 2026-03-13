@@ -21,7 +21,8 @@
     "paths": {
       "@finance/shared-types": ["libs/shared-types/src/index.ts"],
       "@finance/shared-dtos": ["libs/shared-dtos/src/index.ts"],
-      "@finance/database": ["libs/database/src/index.ts"]
+      "@finance/database": ["libs/database/src/index.ts"],
+      "@finance/shared-monitoring": ["libs/shared-monitoring/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist"]

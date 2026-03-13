@@ -8,6 +8,7 @@ import { DatabaseModule } from '../../../libs/database/src/database.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { HealthModule } from './common/health/health.module';
+import { MetricsModule } from '@finance/shared-monitoring';
 import analyticsConfig from './common/config/analytics.config';
 
 @Module({
@@ -17,6 +18,7 @@ import analyticsConfig from './common/config/analytics.config';
     AnalyticsModule,
     ChatbotModule,
     HealthModule,
+    MetricsModule,
   ],
 })
 export class AppModule {}

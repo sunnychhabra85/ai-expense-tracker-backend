@@ -9,6 +9,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { HttpModule } from '@nestjs/axios';
 import { HealthModule } from './common/health/health.module';
 import { ProxyModule } from './proxy/proxy.module';
+import { MetricsModule } from '@finance/shared-monitoring';
 import appConfig from './common/config/app.config';
 
 @Module({
@@ -46,6 +47,7 @@ import appConfig from './common/config/app.config';
     // ── Feature Modules ─────────────────────────────────────────
     HealthModule,
     ProxyModule,
+    MetricsModule,
   ],
 })
 export class AppModule {}

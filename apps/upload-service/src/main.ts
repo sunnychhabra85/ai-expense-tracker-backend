@@ -4,7 +4,7 @@
 // =============================================================
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -19,7 +19,9 @@ async function bootstrap() {
   });
 
   // ── Global prefix ───────────────────────────────────────────
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'metrics', method: RequestMethod.GET }, { path: 'health', method: RequestMethod.GET }],
+  });
 
   // ── Global validation pipe ──────────────────────────────────
   app.useGlobalPipes(

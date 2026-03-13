@@ -1,0 +1,199 @@
+# =============================================================
+# Prometheus + Grafana Stack Configuration
+# Install with: helm install prometheus prometheus-community/kube-prometheus-stack -f prometheus-values.yaml -n monitoring
+# =============================================================
+
+# Prometheus Configuration
+prometheus:
+  prometheusSpec:
+    # Retention period for metrics
+    retention: 15d
+    retentionSize: "10GB"
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    
+    # Storage configuration (optional - for persistent metrics)
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    
+    # Service monitor selectors - scrape all ServiceMonitors
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    
+    # Pod monitor selectors
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelector: {}
+    
+    # Additional scrape configs for custom endpoints
+    additionalScrapeConfigs:
+      - job_name: 'finance-platform-services'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - finance-platform
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+# Grafana Configuration
+grafana:
+  enabled: true
+  
+  # Admin credentials (CHANGE THESE IN PRODUCTION!)
+  adminPassword: "admin123"
+  
+  # Service configuration
+  service:
+    type: LoadBalancer  # Change to ClusterIP if using Ingress
+    port: 80
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Persistence for dashboards and settings
+  persistence:
+    enabled: true
+    size: 10Gi
+  
+  # Disable init container that causes permission issues
+  initChownData:
+    enabled: false
+  
+  # Security context to avoid permission issues
+  securityContext:
+    runAsUser: 472
+    runAsGroup: 472
+    fsGroup: 472
+  
+  # Ingress configuration (optional)
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+    hosts:
+      - grafana.yourdomain.com
+  
+  # The chart already configures Prometheus datasource by default
+  # No need to add it again
+  
+  # Pre-loaded dashboards
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+        - name: 'finance-platform'
+          orgId: 1
+          folder: 'Finance Platform'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/finance-platform
+  
+  # Dashboard config maps
+  dashboards:
+    default:
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      node-exporter:
+        gnetId: 1860
+        revision: 27
+        datasource: Prometheus
+
+# Alertmanager Configuration
+alertmanager:
+  enabled: true
+  
+  config:
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        - match:
+            alertname: Watchdog
+          receiver: 'null'
+    
+    receivers:
+      - name: 'null'
+      - name: 'default'
+        # Add your notification channels here
+        # Example: Slack, PagerDuty, email, etc.
+
+# Node Exporter - for node-level metrics
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics - for Kubernetes object metrics
+kubeStateMetrics:
+  enabled: true
+
+# Disable components not needed
+kubeApiServer:
+  enabled: true
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
