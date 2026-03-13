@@ -1,22 +1,9 @@
 // =============================================================
 // libs/shared-monitoring/src/metrics/metrics.controller.ts
-// Expose /metrics endpoint for Prometheus scraping
+// NOTE: This file is kept for reference but not used
+// The PrometheusModule automatically creates the /metrics endpoint
 // =============================================================
 
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
-
-@ApiTags('monitoring')
-@Controller('metrics')
-@SkipThrottle() // Don't rate-limit metrics scraping
-export class MetricsController {
-  @Get()
-  @ApiExcludeEndpoint() // Hide from Swagger docs
-  @ApiOperation({ summary: 'Prometheus metrics endpoint' })
-  getMetrics() {
-    // The @willsoto/nestjs-prometheus automatically handles this
-    // This controller is just to ensure the route is registered
-    return 'Metrics endpoint';
-  }
-}
+// The @willsoto/nestjs-prometheus package automatically exposes
+// the /metrics endpoint at the path specified in PrometheusModule.register()
+// We don't need a separate controller for this.

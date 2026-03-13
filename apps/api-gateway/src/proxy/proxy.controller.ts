@@ -53,11 +53,11 @@ export class ProxyController {
   // ── Chat Route (Analytics Service) ───────────────────────────
   @All('chat')
   @All('chat/*')
-  @ApiTags('analytics')
+  // @ApiTags('analytics')
   async proxyChat(@Req() req: Request, @Res() res: Response) {
     return this.proxy('analytics', req, res);
   }
-
+ 
   // ── Notification Service Routes ──────────────────────────────
   @All('notifications/*')
   @ApiTags('notifications')

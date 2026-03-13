@@ -5,7 +5,9 @@
 
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
-import { MetricsController } from './metrics.controller';
+import { MetricsService, httpRequestsTotal, httpRequestDuration, dbQueryDuration, businessMetricsCounter } from './metrics.service';
+import { MetricsInterceptor } from './metrics.interceptor';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -20,11 +22,19 @@ import { MetricsController } from './metrics.controller';
           prefix: 'finance_platform_',
         },
       },
-      // Don't create a separate server for metrics
-      pushgateway: undefined,
     }),
   ],
-  controllers: [MetricsController],
-  exports: [PrometheusModule],
+  providers: [
+    MetricsService,
+    httpRequestsTotal,
+    httpRequestDuration,
+    dbQueryDuration,
+    businessMetricsCounter,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
+    },
+  ],
+  exports: [PrometheusModule, MetricsService],
 })
 export class MetricsModule {}

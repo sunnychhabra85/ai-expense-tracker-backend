@@ -28,7 +28,7 @@ export class MetricsInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse();
     const startTime = Date.now();
 
-    const service = process.env.SERVICE_NAME || 'unknown';
+    const service = process.env.SERVICE_NAME || 'unknown-service';
     const method = request.method;
     const route = request.route?.path || request.url;
 

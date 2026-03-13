@@ -24,6 +24,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class S3Service {
   private readonly logger = new Logger(S3Service.name);
   private readonly s3: S3Client;
+  private readonly s3PublicClient: S3Client; // For presigned URLs with public endpoint
   private readonly bucket: string;
   private readonly presignedUrlExpiry: number;
   private readonly maxFileSizeBytes: number;
@@ -34,17 +35,36 @@ export class S3Service {
     this.presignedUrlExpiry = config.get<number>('upload.s3.presignedUrlExpiry', 300);
     this.maxFileSizeBytes = config.get<number>('upload.s3.maxFileSizeBytes', 10_485_760);
 
-    // ── S3 Client ──────────────────────────────────────────────
+    const internalEndpoint = process.env.AWS_ENDPOINT_URL || 'http://localhost:4566';
+    const publicEndpoint = process.env.AWS_PUBLIC_ENDPOINT_URL || process.env.AWS_ENDPOINT_URL || 'http://localhost:4566';
+
+    // ── S3 Client (Internal) ───────────────────────────────────
+    // Used for internal operations (HeadObject, DeleteObject, etc.)
     // In production on EKS: uses IRSA — no explicit credentials needed
     // Locally: uses AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY from .env
     this.s3 = new S3Client({
       region,
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
-      // Add this block for local development with LocalStack:
       ...(process.env.NODE_ENV !== 'production' && {
-        endpoint: process.env.AWS_ENDPOINT_URL || 'http://localhost:4566',
+        endpoint: internalEndpoint,
         forcePathStyle: true,  // Required for LocalStack S3
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+        },
+      }),
+    });
+
+    // ── S3 Client (Public) ─────────────────────────────────────
+    // Used for generating presigned URLs with publicly accessible endpoint
+    this.s3PublicClient = new S3Client({
+      region,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+      ...(process.env.NODE_ENV !== 'production' && {
+        endpoint: publicEndpoint,
+        forcePathStyle: true,
         credentials: {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
           secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
@@ -98,7 +118,8 @@ export class S3Service {
       ChecksumAlgorithm: undefined,
     });
 
-    const uploadUrl = await getSignedUrl(this.s3, command, {
+    // Use public S3 client for presigned URLs so they're accessible from outside Docker
+    const uploadUrl = await getSignedUrl(this.s3PublicClient, command, {
       expiresIn: this.presignedUrlExpiry,
       // Explicitly disable checksums in presigned URL
       unhoistableHeaders: new Set(),

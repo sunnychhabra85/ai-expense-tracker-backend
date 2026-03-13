@@ -8,6 +8,7 @@ import {
   makeCounterProvider,
   makeHistogramProvider,
   makeGaugeProvider,
+  InjectMetric,
 } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram, Gauge } from 'prom-client';
 
@@ -46,32 +47,58 @@ export const businessMetricsCounter = makeCounterProvider({
 
 @Injectable()
 export class MetricsService {
-  // Helper methods for common metric operations
-  
-  recordHttpRequest(
-    method: string,
-    route: string,
-    status: number,
-    service: string,
-    duration?: number,
-  ) {
-    // This will be implemented by injecting the actual metrics
+  constructor(
+    @InjectMetric('finance_platform_http_requests_total')
+    public readonly httpRequestsTotalMetric: Counter<string>,
+    @InjectMetric('finance_platform_http_request_duration_seconds')
+    public readonly httpRequestDurationMetric: Histogram<string>,
+    @InjectMetric('finance_platform_db_query_duration_seconds')
+    public readonly dbQueryDurationMetric: Histogram<string>,
+    @InjectMetric('finance_platform_business_events_total')
+    public readonly businessMetricsCounterMetric: Counter<string>,
+  ) {}
+
+  // Helper method to increment business events
+  recordBusinessEvent(eventType: string, service: string, status: string = 'success') {
+    this.businessMetricsCounterMetric.inc({
+      event_type: eventType,
+      service,
+      status,
+    });
   }
 
-  recordDbQuery(
-    operation: string,
-    table: string,
-    service: string,
-    duration: number,
-  ) {
-    // This will be implemented by injecting the actual metrics
+  // Helper method to record database query timing
+  recordDbQuery(operation: string, table: string, service: string, durationSeconds: number) {
+    this.dbQueryDurationMetric.observe(
+      {
+        operation,
+        table,
+        service,
+      },
+      durationSeconds,
+    );
   }
 
-  recordBusinessEvent(
-    eventType: string,
-    service: string,
-    status: 'success' | 'error',
-  ) {
-    // This will be implemented by injecting the actual metrics
+  // Helper method to record HTTP request
+  recordHttpRequest(method: string, route: string, status: number, service: string, duration?: number) {
+    this.httpRequestsTotalMetric.inc({
+      method,
+      route,
+      status: status.toString(),
+      service,
+    });
+    
+    if (duration !== undefined) {
+      this.httpRequestDurationMetric.observe(
+        {
+          method,
+          route,
+          status: status.toString(),
+          service,
+        },
+        duration,
+      );
+    }
   }
 }
+
