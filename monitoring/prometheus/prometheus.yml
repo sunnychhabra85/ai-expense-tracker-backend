@@ -1,0 +1,117 @@
+# =============================================================
+# Prometheus Configuration
+# Scrapes metrics from all microservices
+# =============================================================
+
+global:
+  scrape_interval: 15s        # Scrape targets every 15 seconds
+  evaluation_interval: 15s    # Evaluate rules every 15 seconds
+  external_labels:
+    cluster: 'local-dev'
+    environment: 'development'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # ───────────────────────────────────────────────────────────
+  # Prometheus Self-Monitoring
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ───────────────────────────────────────────────────────────
+  # Node Exporter - Host System Metrics
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'local-host'
+
+  # ───────────────────────────────────────────────────────────
+  # API Gateway
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'api-gateway'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+        labels:
+          service: 'api-gateway'
+          app: 'ai-finance'
+          tier: 'gateway'
+
+  # ───────────────────────────────────────────────────────────
+  # Auth Service
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'auth-service'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3001']
+        labels:
+          service: 'auth-service'
+          app: 'ai-finance'
+          tier: 'backend'
+
+  # ───────────────────────────────────────────────────────────
+  # Upload Service
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'upload-service'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+        labels:
+          service: 'upload-service'
+          app: 'ai-finance'
+          tier: 'backend'
+
+  # ───────────────────────────────────────────────────────────
+  # Processing Service
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'processing-service'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3003']
+        labels:
+          service: 'processing-service'
+          app: 'ai-finance'
+          tier: 'backend'
+
+  # ───────────────────────────────────────────────────────────
+  # Analytics Service
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'analytics-service'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3004']
+        labels:
+          service: 'analytics-service'
+          app: 'ai-finance'
+          tier: 'backend'
+
+  # ───────────────────────────────────────────────────────────
+  # Notification Service
+  # ───────────────────────────────────────────────────────────
+  - job_name: 'notification-service'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3005']
+        labels:
+          service: 'notification-service'
+          app: 'ai-finance'
+          tier: 'backend'

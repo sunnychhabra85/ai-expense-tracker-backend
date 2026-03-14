@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/apps/api-gateway/src",
+    "outDir": "../../dist/apps/api-gateway",
     "module": "commonjs",
     "types": ["node"],
     "emitDecoratorMetadata": true,

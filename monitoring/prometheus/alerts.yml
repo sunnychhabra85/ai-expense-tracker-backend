@@ -1,0 +1,80 @@
+# =============================================================
+# Prometheus Alert Rules
+# Define alerts for monitoring microservices health
+# =============================================================
+
+groups:
+  - name: microservices_alerts
+    interval: 30s
+    rules:
+      # ───────────────────────────────────────────────────────
+      # Service Down Alerts
+      # ───────────────────────────────────────────────────────
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute."
+
+      # ───────────────────────────────────────────────────────
+      # High CPU Usage
+      # ───────────────────────────────────────────────────────
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_user_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.service }}"
+          description: "CPU usage is above 80% for {{ $labels.service }}"
+
+      # ───────────────────────────────────────────────────────
+      # High Memory Usage
+      # ───────────────────────────────────────────────────────
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 500000000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.service }}"
+          description: "Memory usage is above 500MB for {{ $labels.service }}"
+
+      # ───────────────────────────────────────────────────────
+      # High HTTP Error Rate
+      # ───────────────────────────────────────────────────────
+      - alert: HighHTTPErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx error rate on {{ $labels.service }}"
+          description: "{{ $labels.service }} is returning more than 5% 5xx errors"
+
+      # ───────────────────────────────────────────────────────
+      # Slow HTTP Response Time
+      # ───────────────────────────────────────────────────────
+      - alert: SlowHTTPResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow HTTP response time on {{ $labels.service }}"
+          description: "95th percentile response time is above 1 second for {{ $labels.service }}"
+
+      # ───────────────────────────────────────────────────────
+      # Event Loop Lag
+      # ───────────────────────────────────────────────────────
+      - alert: HighEventLoopLag
+        expr: nodejs_eventloop_lag_seconds > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High event loop lag on {{ $labels.service }}"
+          description: "Event loop lag is above 100ms for {{ $labels.service }}"
