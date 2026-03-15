@@ -83,6 +83,9 @@ services:
       context: .
       dockerfile: apps/api-gateway/Dockerfile
       target: runner
+      args:
+        SERVICE_NAME: api-gateway
+        PORT: 3000
     container_name: finance_api_gateway
     ports:
       - "${API_GATEWAY_PORT:-3000}:3000"
@@ -111,7 +114,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -121,6 +124,9 @@ services:
       context: .
       dockerfile: apps/auth-service/Dockerfile
       target: runner
+      args:
+        SERVICE_NAME: auth-service
+        PORT: 3001
     container_name: finance_auth
     ports:
       - "${AUTH_SERVICE_PORT:-3001}:3001"
@@ -140,7 +146,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -150,6 +156,9 @@ services:
       context: .
       dockerfile: apps/upload-service/Dockerfile
       target: runner
+      args:
+        SERVICE_NAME: upload-service
+        PORT: 3002
     container_name: finance_upload
     ports:
       - "${UPLOAD_SERVICE_PORT:-3002}:3002"
@@ -174,7 +183,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3002/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -184,6 +193,9 @@ services:
       context: .
       dockerfile: apps/processing-service/Dockerfile
       target: runner
+      args:
+        SERVICE_NAME: processing-service
+        PORT: 3003
     container_name: finance_processing
     ports:
       - "${PROCESSING_SERVICE_PORT:-3003}:3003"
@@ -207,7 +219,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3003/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -217,6 +229,9 @@ services:
       context: .
       dockerfile: apps/analytics-service/Dockerfile
       target: runner
+      args:
+        SERVICE_NAME: analytics-service
+        PORT: 3004
     container_name: finance_analytics
     ports:
       - "${ANALYTICS_SERVICE_PORT:-3004}:3004"
@@ -237,7 +252,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3004/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3004/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -247,6 +262,9 @@ services:
       context: .
       dockerfile: apps/notification-service/Dockerfile
       target: runner
+      args:
+        SERVICE_NAME: notification-service
+        PORT: 3005
     container_name: finance_notification
     ports:
       - "${NOTIFICATION_SERVICE_PORT:-3005}:3005"
@@ -262,7 +280,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3005/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3005/health"]
       interval: 15s
       timeout: 5s
       retries: 5

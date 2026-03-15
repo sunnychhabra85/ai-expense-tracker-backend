@@ -1,0 +1,20 @@
+﻿Finance Platform Deployment Summary
+Generated: 03/15/2026 08:15:38
+
+EC2 Instance ID: 
+Public IP: None
+SSH Key: finance-platform-key.pem
+Security Group: 
+Region: us-east-1
+
+S3 Bucket: finance-platform-1773542696
+SQS Queue: https://sqs.us-east-1.amazonaws.com/014071048720/document-processing
+IAM User: finance-platform-app
+
+SSH Command:
+ssh -i finance-platform-key.pem ec2-user@None
+
+Application URL:
+http://None
+
+For complete setup instructions, see: AWS_FREE_TIER_DEPLOYMENT.md

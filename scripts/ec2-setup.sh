@@ -36,8 +36,9 @@ echo ""
 echo "[1/8] Updating system packages..."
 
 if [ "$OS" = "amzn" ] || [ "$OS" = "rhel" ]; then
-    yum update -y
-    yum install -y git curl wget vim htop
+    # Fix for Amazon Linux 2023 curl-minimal conflict
+    yum update -y --exclude=curl-minimal || yum update -y --skip-broken
+    yum install -y git wget vim htop
 elif [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
     apt-get update
     apt-get upgrade -y

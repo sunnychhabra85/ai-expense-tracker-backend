@@ -13,6 +13,7 @@ COPY . .
 RUN npx prisma generate --schema=libs/database/prisma/schema.prisma
 RUN npx nx build database --prod
 RUN npx nx build shared-types --prod
+RUN npx nx build shared-monitoring --prod
 ARG SERVICE_NAME
 RUN npx nx build ${SERVICE_NAME} --prod
 
@@ -29,6 +30,18 @@ RUN apk add --no-cache tini wget openssl \
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig.production.json ./tsconfig.json
 COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy Prisma CLI for migrations
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy Prisma schema file for migrations
+COPY --from=builder /app/libs/database/prisma ./libs/database/prisma
+# Copy startup script
+COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+# Create writable directory for Prisma engines and migrations
+RUN mkdir -p /app/node_modules/@prisma/engines \
+  && chown -R appuser:appgroup /app/node_modules/@prisma \
+  && chmod +x /app/docker-entrypoint.sh
 
 ARG SERVICE_NAME
 ARG PORT
@@ -42,4 +55,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -qO- http://localhost:${PORT}/api/v1/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "node -r tsconfig-paths/register dist/apps/${SERVICE_NAME}/src/main.js"]
+CMD ["/app/docker-entrypoint.sh"]

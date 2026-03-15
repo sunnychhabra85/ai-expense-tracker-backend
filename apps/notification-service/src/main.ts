@@ -5,7 +5,7 @@
 // =============================================================
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {

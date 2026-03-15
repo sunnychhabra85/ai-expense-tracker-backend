@@ -1,0 +1,16 @@
+{
+  "name": "shared-monitoring",
+  "sourceRoot": "libs/shared-monitoring/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/libs/shared-monitoring",
+        "main": "libs/shared-monitoring/src/index.ts",
+        "tsConfig": "libs/shared-monitoring/tsconfig.lib.json"
+      }
+    }
+  },
+  "tags": ["scope:shared", "type:lib"]
+}
