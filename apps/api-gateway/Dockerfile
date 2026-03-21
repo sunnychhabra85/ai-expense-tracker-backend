@@ -9,6 +9,8 @@ COPY package*.json ./
 RUN npm ci --include=dev && npm cache clean --force
 
 FROM deps AS builder
+# Install OpenSSL required by Prisma
+RUN apk add --no-cache openssl
 COPY . .
 RUN npx prisma generate --schema=libs/database/prisma/schema.prisma
 RUN npx nx build database --prod
@@ -38,9 +40,9 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/libs/database/prisma ./libs/database/prisma
 # Copy startup script
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
-# Create writable directory for Prisma engines and migrations
+# Set proper permissions for appuser
 RUN mkdir -p /app/node_modules/@prisma/engines \
-  && chown -R appuser:appgroup /app/node_modules/@prisma \
+  && chown -R appuser:appgroup /app \
   && chmod +x /app/docker-entrypoint.sh
 
 ARG SERVICE_NAME
