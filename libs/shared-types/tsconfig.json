@@ -1,5 +1,9 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": { "module": "commonjs" },
+  "compilerOptions": {
+    "module": "commonjs",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  },
   "include": ["src/**/*"]
 }

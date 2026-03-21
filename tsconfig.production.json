@@ -4,10 +4,9 @@
     "target": "ES2021",
     "baseUrl": "./",
     "paths": {
-      "@finance/shared-types": ["dist/libs/shared-types"],
-      "@finance/shared-dtos": ["dist/libs/shared-dtos"],
-      "@finance/database": ["dist/libs/database"],
-      "@finance/shared-monitoring": ["dist/libs/shared-monitoring"]
+      "@finance/shared-types": ["dist/libs/shared-types/src"],
+      "@finance/database": ["dist/libs/database/src"],
+      "@finance/shared-monitoring": ["dist/libs/shared-monitoring/src"]
     }
   }
 }
