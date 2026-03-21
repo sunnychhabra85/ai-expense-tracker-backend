@@ -3,7 +3,9 @@
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
-    "outDir": "../../dist/libs/shared-monitoring"
+    "outDir": "../../dist/libs/shared-monitoring",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]
