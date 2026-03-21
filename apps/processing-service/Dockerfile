@@ -49,7 +49,8 @@ ARG SERVICE_NAME
 ARG PORT
 ENV NODE_ENV=production \
     SERVICE_NAME=${SERVICE_NAME} \
-    PORT=${PORT}
+    PORT=${PORT} \
+    TS_NODE_PROJECT=/app/tsconfig.json
 
 USER appuser
 EXPOSE ${PORT}

@@ -22,4 +22,4 @@ fi
 
 echo ""
 echo "✅ Starting application: $SERVICE_NAME on port $PORT"
-exec node "dist/apps/${SERVICE_NAME}/src/main.js"
+exec node -r tsconfig-paths/register "dist/apps/${SERVICE_NAME}/src/main.js"
