@@ -54,7 +54,7 @@ services:
       LOCALSTACK_HOST: localstack
     volumes:
       - localstackdata:/var/lib/localstack
-      - ./infrastructure/scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh
+      - ./infrastructure/scripts/localstack-init.sh:/etc/localstack/init/ready.d
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 10s
@@ -100,7 +100,7 @@ services:
       PROCESSING_SERVICE_URL: ${PROCESSING_SERVICE_URL:-http://processing-service:3003}
       ANALYTICS_SERVICE_URL: ${ANALYTICS_SERVICE_URL:-http://analytics-service:3004}
       NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:3005}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080,http://localhost:8081}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -140,7 +140,7 @@ services:
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       BCRYPT_ROUNDS: "${BCRYPT_ROUNDS:-10}"
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080,http://localhost:8081}
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,7 +175,7 @@ services:
       AWS_PUBLIC_ENDPOINT_URL: http://localhost:4566
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080,http://localhost:8081}
     depends_on:
       postgres:
         condition: service_healthy
@@ -244,7 +244,7 @@ services:
       REDIS_URL: redis://:localredispass@redis:6379
       CACHE_TTL_SECONDS: "300"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080,http://localhost:8081}
     depends_on:
       postgres:
         condition: service_healthy
@@ -274,7 +274,7 @@ services:
       # Override .env with Docker internal hostnames
       DATABASE_URL: postgresql://admin:localpassword123@postgres:5432/financedb
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-ok}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080,http://localhost:8081}
     depends_on:
       postgres:
         condition: service_healthy
